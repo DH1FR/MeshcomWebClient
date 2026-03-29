@@ -1,0 +1,228 @@
+@page "/"
+@using MeshcomWebClient.Models
+@using MeshcomWebClient.Services
+@rendermode InteractiveServer
+@inject ChatService ChatService
+@inject MeshcomUdpService UdpService
+@implements IDisposable
+
+<PageTitle>MeshCom Web Client</PageTitle>
+
+<ErrorBoundary>
+    <ChildContent>
+<div class="meshcom-container">
+    @* ===== UPPER AREA: Tabs with conversations ===== *@
+    <div class="upper-pane">
+        <div class="tab-bar">
+            @foreach (var tab in _tabs)
+            {
+                <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
+                        @onclick="() => SelectTab(tab.Key)">
+                    @tab.Title
+                    <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
+                </button>
+            }
+            <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="Neuen Tab öffnen">+</button>
+        </div>
+
+        @if (_showNewTabInput)
+        {
+            <div class="new-tab-dialog">
+                <input @bind="_newTabCallsign" @bind:event="oninput"
+                       placeholder="Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)"
+                       @onkeydown="OnNewTabKeyDown" />
+                <button class="btn-action" @onclick="CreateNewTab">Öffnen</button>
+                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">Abbrechen</button>
+            </div>
+        }
+
+        <div class="tab-content">
+            @if (_activeTab != null)
+            {
+                <div class="message-list" id="tab-messages">
+                    @foreach (var msg in _activeTabMessages)
+                    {
+                        <div class="message @(msg.IsOutgoing ? "msg-out" : "msg-in")">
+                            <span class="msg-time">@msg.Timestamp.ToString("HH:mm:ss")</span>
+                            <span class="msg-call">@(msg.IsOutgoing ? _myCallsign : msg.From):</span>
+                            <span class="msg-text">@msg.Text</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="send-bar">
+                    <input @bind="_messageText" @bind:event="oninput"
+                           placeholder="Nachricht eingeben..."
+                           @onkeydown="OnSendKeyDown" />
+                    <button class="btn-send" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(_messageText)">
+                        Senden
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="no-tab-selected">
+                    <p>Kein Tab ausgewählt. Klicke <strong>+</strong> um einen neuen Chat zu öffnen,
+                       oder warte auf eine eingehende Nachricht.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ===== LOWER AREA: All raw received data ===== *@
+    <div class="lower-pane">
+        <div class="pane-header">
+            <span>📡 Alle empfangenen Daten</span>
+            <span class="msg-count">(@_allMessages.Count Nachrichten)</span>
+        </div>
+        <div class="raw-message-list" id="raw-messages">
+            @foreach (var msg in _allMessages)
+            {
+                <div class="raw-message">
+                    <span class="msg-time">@msg.Timestamp.ToString("HH:mm:ss")</span>
+                    <span class="raw-direction">@(msg.IsOutgoing ? "TX" : "RX")</span>
+                    <span class="raw-data">@msg.RawData</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
+            <strong>Fehler:</strong> @ex.Message
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private List<ChatTab> _tabs = [];
+    private IReadOnlyList<MeshcomMessage> _allMessages = [];
+    private IReadOnlyList<MeshcomMessage> _activeTabMessages = [];
+    private string _activeTabKey = string.Empty;
+    private ChatTab? _activeTab;
+    private string _messageText = string.Empty;
+    private string _newTabCallsign = string.Empty;
+    private bool _showNewTabInput;
+    private string _myCallsign = string.Empty;
+    private bool _disposed;
+
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        _myCallsign = Configuration.GetSection("Meshcom")["MyCallsign"] ?? "N0CALL";
+        ChatService.OnChange += OnChatChanged;
+        RefreshData();
+    }
+
+    private async void OnChatChanged()
+    {
+        if (_disposed) return;
+
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                RefreshData();
+                StateHasChanged();
+            });
+        }
+        catch (Exception)
+        {
+            // Component may be disposed or circuit disconnected – safe to ignore
+        }
+    }
+
+    private void RefreshData()
+    {
+        _tabs = ChatService.Tabs.ToList();
+        _allMessages = ChatService.AllMessages;
+
+        // If active tab was closed, select first available
+        if (!string.IsNullOrEmpty(_activeTabKey))
+        {
+            _activeTab = ChatService.GetTab(_activeTabKey);
+        }
+
+        if (_activeTab == null && _tabs.Count > 0)
+        {
+            _activeTabKey = _tabs[0].Key;
+            _activeTab = _tabs[0];
+        }
+
+        // Create a snapshot of the active tab's messages for thread-safe rendering
+        _activeTabMessages = _activeTab != null
+            ? ChatService.GetTabMessages(_activeTabKey)
+            : [];
+    }
+
+    private void SelectTab(string key)
+    {
+        _activeTabKey = key;
+        _activeTab = ChatService.GetTab(key);
+        _activeTabMessages = ChatService.GetTabMessages(key);
+    }
+
+    private void CloseTab(string key)
+    {
+        ChatService.CloseTab(key);
+        if (_activeTabKey == key)
+        {
+            _activeTabKey = string.Empty;
+            _activeTab = null;
+        }
+        RefreshData();
+    }
+
+    private void ShowNewTabDialog()
+    {
+        _showNewTabInput = true;
+        _newTabCallsign = string.Empty;
+    }
+
+    private void CreateNewTab()
+    {
+        if (string.IsNullOrWhiteSpace(_newTabCallsign))
+            return;
+
+        var key = _newTabCallsign.Trim().ToUpperInvariant();
+        ChatService.OpenTab(key);
+        _activeTabKey = key;
+        _activeTab = ChatService.GetTab(key);
+        _showNewTabInput = false;
+        _newTabCallsign = string.Empty;
+        RefreshData();
+    }
+
+    private void OnNewTabKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            CreateNewTab();
+        else if (e.Key == "Escape")
+            _showNewTabInput = false;
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_messageText) || _activeTab == null)
+            return;
+
+        var destination = _activeTab.Key == "*" ? "CQCQCQ" : _activeTab.Key;
+        await UdpService.SendMessageAsync(destination, _messageText);
+        _messageText = string.Empty;
+    }
+
+    private async Task OnSendKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SendMessage();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ChatService.OnChange -= OnChatChanged;
+    }
+}

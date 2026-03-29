@@ -1,0 +1,22 @@
+## .NET build output
+bin/
+obj/
+
+## User-specific VS files
+*.user
+*.suo
+.vs/
+
+## Serilog log files
+*.log
+
+## Published output
+publish/
+out/
+
+## Rider
+.idea/
+
+## OS
+.DS_Store
+Thumbs.db
