@@ -53,4 +53,13 @@ public class MeshcomMessage
     public bool IsBroadcast =>
         string.Equals(To, "*", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(To, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Sequence number assigned by the node (e.g. "034" from "{034}").
+    /// Set when the node echo is received. Used to match an incoming ACK.
+    /// </summary>
+    public string? SequenceNumber { get; set; }
+
+    /// <summary>True once a delivery ACK for this outgoing message has been received.</summary>
+    public bool IsAcknowledged { get; set; }
 }

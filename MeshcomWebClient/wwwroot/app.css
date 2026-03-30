@@ -235,6 +235,17 @@ h1:focus {
     color: #e0e0e0;
 }
 
+/* ACK delivery indicator on outgoing messages */
+.msg-ack {
+    font-size: 11px;
+    margin-left: 5px;
+    display: inline-block;
+    user-select: none;
+}
+.ack-pending { color: #6c757d; }
+.ack-sent    { color: #a0c4ff; }
+.ack-ok      { color: #3fb950; font-weight: 700; }
+
 /* ===== Send Bar ===== */
 .send-bar {
     display: flex;

@@ -38,6 +38,14 @@ public partial class MeshcomUdpService : BackgroundService
     [GeneratedRegex(@"^\S+\s+:ack\d+$")]
     private static partial Regex AckPattern();
 
+    /// <summary>Captures the sequence number from a trailing {NNN} marker, e.g. "{034" → "034".</summary>
+    [GeneratedRegex(@"\{(\d+)$")]
+    private static partial Regex SequenceNumberPattern();
+
+    /// <summary>Captures the sequence number from an APRS ACK text, e.g. "DH1FR-2  :ack034" → "034".</summary>
+    [GeneratedRegex(@":ack(\d+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex AckSequencePattern();
+
     public MeshcomUdpService(
         ILogger<MeshcomUdpService> logger,
         IOptionsMonitor<MeshcomSettings> settings,
@@ -107,16 +115,21 @@ public partial class MeshcomUdpService : BackgroundService
                                 SetOwnPosition(message.Latitude.Value, message.Longitude.Value,
                                                message.Altitude, "Node");
                             }
+                            // Assign node-assigned sequence number to matching outgoing message
+                            if (message.SequenceNumber != null)
+                                _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
                             _chatService.AddRawMessage(message);
                         }
                         else if (message.IsAck)
                         {
-                            // APRS ACK – monitor only, no chat tab
+                            // APRS ACK – monitor only, no chat tab; mark matching message as delivered
                             Status.RxCount++;
                             Status.LastRxTime = message.Timestamp;
                             Status.LastRxFrom = message.From;
                             NotifyStatusChange();
+                            if (message.SequenceNumber != null)
+                                _chatService.MarkMessageAcknowledged(message.SequenceNumber);
                             _chatService.AddRawMessage(message);
                         }
                         else if (message.IsPositionBeacon)
@@ -314,12 +327,26 @@ public partial class MeshcomUdpService : BackgroundService
             var commaIdx = src.IndexOf(',');
             var sender   = commaIdx >= 0 ? src[..commaIdx] : src;
 
-            // Strip trailing sequence marker like {034, {333
+            // Extract sequence number from {NNN} before stripping it
+            string? seqNum = null;
             if (!isPositionBeacon)
+            {
+                var seqMatch = SequenceNumberPattern().Match(msg);
+                if (seqMatch.Success)
+                    seqNum = seqMatch.Groups[1].Value;
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
+            }
 
             // Detect APRS-style ACK: "DH1FR-2 :ack187" (callsign may be space-padded to 9 chars)
             var isAck = !isPositionBeacon && AckPattern().IsMatch(msg.Trim());
+
+            // For ACK messages extract the sequence number from the :ackNNN part
+            if (isAck)
+            {
+                var ackSeqMatch = AckSequencePattern().Match(msg);
+                if (ackSeqMatch.Success)
+                    seqNum = ackSeqMatch.Groups[1].Value;
+            }
 
             // src_type:"node" = local device packet; rssi/snr are 0 and not meaningful
             var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
@@ -382,7 +409,8 @@ public partial class MeshcomUdpService : BackgroundService
                 Longitude        = lon,
                 Altitude         = alt,
                 IsPositionBeacon = isPositionBeacon,
-                IsAck            = isAck
+                IsAck            = isAck,
+                SequenceNumber   = seqNum
             };
         }
         catch (JsonException ex)

@@ -155,6 +155,40 @@ public class ChatService
             lock (_lock) { tab.UnreadCount = 0; }
     }
 
+    /// <summary>
+    /// Assigns the node sequence number (from the echo packet) to the most recent
+    /// outgoing message sent to <paramref name="destination"/> that has no sequence yet.
+    /// </summary>
+    public void AssignOutgoingSequence(string destination, string sequenceNumber)
+    {
+        lock (_lock)
+        {
+            var msg = _allMessages.LastOrDefault(m =>
+                m.IsOutgoing &&
+                m.SequenceNumber == null &&
+                string.Equals(m.To, destination, StringComparison.OrdinalIgnoreCase));
+            if (msg != null)
+                msg.SequenceNumber = sequenceNumber;
+        }
+        NotifyChange();
+    }
+
+    /// <summary>
+    /// Marks the outgoing message with the given sequence number as acknowledged
+    /// after an APRS ACK packet has been received.
+    /// </summary>
+    public void MarkMessageAcknowledged(string sequenceNumber)
+    {
+        lock (_lock)
+        {
+            var msg = _allMessages.LastOrDefault(m =>
+                m.IsOutgoing && m.SequenceNumber == sequenceNumber);
+            if (msg != null)
+                msg.IsAcknowledged = true;
+        }
+        NotifyChange();
+    }
+
     /// <summary>Remove all entries from the MH list.</summary>
     public void ClearMhList()
     {

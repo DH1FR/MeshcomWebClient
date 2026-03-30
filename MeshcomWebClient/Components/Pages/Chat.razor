@@ -52,6 +52,10 @@
                             <span class="msg-time">@msg.Timestamp.ToString("HH:mm:ss")</span>
                             <span class="msg-call">@(msg.IsOutgoing ? _myCallsign : msg.From):</span>
                             <span class="msg-text">@msg.Text</span>
+                            @if (msg.IsOutgoing)
+                            {
+                                <span class="@AckCssClass(msg)" title="@AckTooltip(msg)">@AckIcon(msg)</span>
+                            }
                         </div>
                     }
                 </div>
@@ -425,5 +429,26 @@
             _status.OwnLatitude.Value, _status.OwnLongitude.Value,
             m.Latitude.Value, m.Longitude.Value);
         return GeoHelper.FormatDistance(km);
+    }
+
+    private static string AckCssClass(MeshcomMessage m)
+    {
+        if (m.IsAcknowledged)        return "msg-ack ack-ok";
+        if (m.SequenceNumber != null) return "msg-ack ack-sent";
+        return "msg-ack ack-pending";
+    }
+
+    private static string AckIcon(MeshcomMessage m)
+    {
+        if (m.IsAcknowledged)        return "✓✓";
+        if (m.SequenceNumber != null) return "✓";
+        return "⏳";
+    }
+
+    private static string AckTooltip(MeshcomMessage m)
+    {
+        if (m.IsAcknowledged)        return "Zugestellt";
+        if (m.SequenceNumber != null) return $"Gesendet (Seq #{m.SequenceNumber})";
+        return "Warte auf Node-Echo…";
     }
 }
