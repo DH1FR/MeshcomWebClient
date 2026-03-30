@@ -1,5 +1,6 @@
 @page "/about"
 @rendermode InteractiveServer
+@using System.Reflection
 
 <PageTitle>Über – MeshCom Web Client</PageTitle>
 
@@ -21,6 +22,12 @@
             Empfangen und senden von LoRa-Nachrichten direkt im Browser.
         </p>
 
+        <div class="about-divider"></div>
+
+        <p class="about-build">
+            🔨 Build &nbsp;<span class="about-build-date">@_buildDate</span>
+        </p>
+
         <div class="about-links">
             <a class="about-link" href="https://github.com/DH1FR/MeshcomWebClient" target="_blank">
                 🔗 GitHub Repository
@@ -31,3 +38,11 @@
         </div>
     </div>
 </div>
+
+@code {
+    private static readonly string _buildDate =
+        typeof(About).Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(a => a.Key == "BuildDate")?.Value
+        ?? "–";
+}
