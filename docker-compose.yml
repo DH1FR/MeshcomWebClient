@@ -7,6 +7,7 @@ services:
     network_mode: host          # required for UDP RX from MeshCom device
     volumes:
       - ./logs:/app/logs        # persist log files
+      - ./keys:/app/keys        # persist Data Protection keys (prevents antiforgery errors after restart)
       - ./appsettings.json:/app/appsettings.json:ro   # override config
     environment:
       - ASPNETCORE_ENVIRONMENT=Production

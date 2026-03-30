@@ -1,6 +1,7 @@
 using MeshcomWebClient.Components;
 using MeshcomWebClient.Models;
 using MeshcomWebClient.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,13 @@ builder.Host.UseSerilog((context, config) => config
 
 // Bind MeshCom settings from configuration
 builder.Services.Configure<MeshcomSettings>(meshcomSection);
+
+// Persist Data Protection keys to disk so antiforgery tokens survive container restarts.
+// The path is configurable via the environment variable DATAPROTECTION_KEYPATH (default: /app/keys).
+var keyPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYPATH") ?? "/app/keys";
+Directory.CreateDirectory(keyPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
 
 // Register services
 builder.Services.AddSingleton<ChatService>();
