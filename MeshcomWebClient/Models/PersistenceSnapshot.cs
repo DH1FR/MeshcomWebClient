@@ -12,4 +12,10 @@ public class PersistenceSnapshot
     public List<HeardStation> MhList { get; set; } = [];
 
     public List<MeshcomMessage> MonitorMessages { get; set; } = [];
+
+    /// <summary>Last known own GPS position, persisted so it is available immediately on restart.</summary>
+    public double? OwnLatitude { get; set; }
+    public double? OwnLongitude { get; set; }
+    public int? OwnAltitude { get; set; }
+    public string OwnPositionSource { get; set; } = string.Empty;
 }

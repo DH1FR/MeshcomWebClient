@@ -19,15 +19,18 @@ public class DataPersistenceService : BackgroundService
     };
 
     private readonly ChatService _chatService;
+    private readonly MeshcomUdpService _udpService;
     private readonly MeshcomSettings _settings;
     private readonly ILogger<DataPersistenceService> _logger;
 
     public DataPersistenceService(
         ChatService chatService,
+        MeshcomUdpService udpService,
         IOptions<MeshcomSettings> settings,
         ILogger<DataPersistenceService> logger)
     {
         _chatService = chatService;
+        _udpService  = udpService;
         _settings    = settings.Value;
         _logger      = logger;
     }
@@ -56,6 +59,10 @@ public class DataPersistenceService : BackgroundService
             Directory.CreateDirectory(_settings.DataPath);
             var path     = FilePath();
             var snapshot = _chatService.CreateSnapshot();
+            snapshot.OwnLatitude       = _udpService.Status.OwnLatitude;
+            snapshot.OwnLongitude      = _udpService.Status.OwnLongitude;
+            snapshot.OwnAltitude       = _udpService.Status.OwnAltitude;
+            snapshot.OwnPositionSource = _udpService.Status.OwnPositionSource;
             var json     = JsonSerializer.Serialize(snapshot, JsonOptions);
             await File.WriteAllTextAsync(path, json);
             _logger.LogDebug("State saved to {Path} ({Tabs} tabs, {Mh} MH entries, {Mon} monitor entries)",
@@ -83,6 +90,16 @@ public class DataPersistenceService : BackgroundService
             if (snapshot is not null)
             {
                 _chatService.LoadSnapshot(snapshot);
+
+                if (snapshot.OwnLatitude.HasValue && snapshot.OwnLongitude.HasValue)
+                {
+                    _udpService.SetOwnPosition(
+                        snapshot.OwnLatitude.Value,
+                        snapshot.OwnLongitude.Value,
+                        snapshot.OwnAltitude,
+                        snapshot.OwnPositionSource);
+                }
+
                 _logger.LogInformation(
                     "State loaded from {Path} (saved {SavedAt:yyyy-MM-dd HH:mm:ss}, " +
                     "{Tabs} tabs, {Mh} MH entries, {Mon} monitor entries)",
