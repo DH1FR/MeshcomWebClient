@@ -7,6 +7,16 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 💡 Motivation
+
+MeshCom erinnert mich immer ein wenig an die schöne alte **Packet-Radio**-Zeit – digitale Textkommunikation über Funk, einfach und direkt.
+
+Leider kannte ich keine geeignete Software, die über einen **Web-Server** für alle Geräte (PC, Tablet, Smartphone) eine Bedienoberfläche für MeshCom im internen Netzwerk bereitstellt. Aus diesem Grund entstand dieser **MeshCom Web Client**.
+
+Die Anwendung kann auf **Windows** oder **Linux** gestartet werden und stellt über eine einfache URL einen vollständigen Web-Client für MeshCom zur Verfügung – ohne Installation auf dem Endgerät, direkt im Browser.
+
+---
+
 ## Screenshots
 
 > Place a screenshot as `docs/screenshot.png` and it will appear here.
@@ -293,38 +303,3 @@ MIT – see [LICENSE](LICENSE)
 ---
 
 © by Ralf Altenbrand (DH1FR) 03/2026
-
----
-
-## EXTUDP Protocol
-
-| Direction | Format |
-|-----------|--------|
-| Registration | `{"type":"info","src":"DH1FR-2","dst":"*","msg":"info"}` |
-| Receive (RX) | `{"src_type":"lora","type":"msg","src":"DH1FR-1","dst":"DH1FR-2","msg":"Hello{034",...}` |
-| Send (TX)    | `{"type":"msg","dst":"DH1FR-1","msg":"Hello"}` |
-
----
-
-## Requirements
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- A reachable MeshCom node with EXTUDP enabled
-- UDP port 1799 open on the host
-
----
-
-## Build & Run
-
-```powershell
-cd MeshcomWebClient
-dotnet run
-```
-
-Then open `https://localhost:5001` in your browser.
-
----
-
-## License
-
-MIT – see [LICENSE](LICENSE)
