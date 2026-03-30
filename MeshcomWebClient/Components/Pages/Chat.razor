@@ -182,6 +182,17 @@
             <span class="status-sep">|</span>
             <span class="status-item">📤 @_status.LastTxTime.Value.ToString("HH:mm:ss")</span>
         }
+        @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item status-ok">
+                📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)
+                @if (_status.OwnAltitude.HasValue)
+                {
+                    <span class="status-pos-alt">&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</span>
+                }
+            </span>
+        }
     </div>
 </div>
     </ChildContent>

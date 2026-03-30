@@ -644,6 +644,7 @@ h1:focus {
 .status-ok  { color: #3fb950; }
 .status-err { color: #f85149; }
 .status-warn { color: #d29922; }
+.status-pos-alt { color: #6c757d; }
 
 .rssi-good { color: #3fb950; }
 .rssi-fair { color: #d29922; }
