@@ -91,7 +91,11 @@ public class ChatService
         lock (_lock)
         {
             AppendToMonitor(message);
-            tab?.Messages.Add(message);
+            if (tab != null)
+            {
+                tab.Messages.Add(message);
+                tab.UnreadCount++;
+            }
         }
 
         UpdateMhList(message);
@@ -142,6 +146,13 @@ public class ChatService
     {
         _tabs.TryRemove(key, out _);
         NotifyChange();
+    }
+
+    /// <summary>Resets the unread counter for the given tab (call when user switches to it).</summary>
+    public void ClearUnread(string key)
+    {
+        if (_tabs.TryGetValue(key, out var tab))
+            lock (_lock) { tab.UnreadCount = 0; }
     }
 
     /// <summary>Remove all entries from the MH list.</summary>

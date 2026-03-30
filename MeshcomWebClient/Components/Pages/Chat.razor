@@ -21,6 +21,10 @@
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
                         @onclick="() => SelectTab(tab.Key)">
                     @tab.Title
+                    @if (tab.UnreadCount > 0)
+                    {
+                        <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
+                    }
                     <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
@@ -298,6 +302,8 @@
             ? ChatService.GetTabMessages(_activeTabKey)
             : [];
 
+        if (!string.IsNullOrEmpty(_activeTabKey))
+            ChatService.ClearUnread(_activeTabKey);
         _scrollMessages = true;
     }
 
@@ -306,6 +312,7 @@
         _activeTabKey = key;
         _activeTab = ChatService.GetTab(key);
         _activeTabMessages = ChatService.GetTabMessages(key);
+        ChatService.ClearUnread(key);
         _scrollMessages = true;
     }
 

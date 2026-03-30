@@ -12,4 +12,8 @@ public class ChatTab
 
     /// <summary>Messages belonging to this conversation.</summary>
     public List<MeshcomMessage> Messages { get; set; } = [];
+
+    /// <summary>Number of messages received while this tab was not active. Not persisted.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int UnreadCount { get; set; }
 }

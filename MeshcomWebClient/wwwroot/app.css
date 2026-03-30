@@ -93,6 +93,18 @@ h1:focus {
     color: #ff3333;
 }
 
+.tab-unread {
+    background: #e3b341;
+    color: #0d1117;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 6px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.6;
+}
+
 .tab-new {
     background: #2d6a4f;
     color: #b7e4c7;
