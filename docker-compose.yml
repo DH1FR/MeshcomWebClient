@@ -8,6 +8,7 @@ services:
     volumes:
       - ./logs:/app/logs        # persist log files
       - ./keys:/app/keys        # persist Data Protection keys (prevents antiforgery errors after restart)
+      - ./data:/app/data        # persist chat state (tabs, MH list, monitor)
       - ./appsettings.json:/app/appsettings.json:ro   # override config
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
@@ -19,3 +20,4 @@ services:
       - Meshcom__GroupFilterEnabled=false
       # Meshcom__Groups__0=#OE
       # Meshcom__Groups__1=#Test
+      - Meshcom__DataPath=/app/data

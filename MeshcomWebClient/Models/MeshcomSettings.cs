@@ -48,4 +48,10 @@ public class MeshcomSettings
     /// opened when a message arrives. Only evaluated when <see cref="GroupFilterEnabled"/> is true.
     /// </summary>
     public List<string> Groups { get; set; } = [];
+
+    /// <summary>
+    /// Directory path for persistent state storage (chat tabs, MH list, monitor feed).
+    /// Data is loaded on startup and saved every 5 minutes and on graceful shutdown.
+    /// </summary>
+    public string DataPath { get; set; } = @"C:\Temp\MeshcomData";
 }

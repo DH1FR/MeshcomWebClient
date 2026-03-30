@@ -617,6 +617,49 @@ h1:focus {
     text-decoration: underline;
 }
 
+/* ===== Clear Page ===== */
+.clear-card  { border-color: #6e2020; }
+
+.clear-warning {
+    color: #f0883e;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0 0 1.25rem;
+}
+
+.clear-success {
+    color: #3fb950;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+}
+
+.clear-hint {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.clear-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-danger {
+    background: #6e2020;
+    color: #fff;
+    border: 1px solid #f85149;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-danger:hover { background: #a32a2a; }
+
 /* ===== Status Bar ===== */
 .status-bar {
     display: flex;

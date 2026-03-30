@@ -152,6 +152,62 @@ public class ChatService
     }
 
     /// <summary>
+    /// Clears all chat tabs, MH list and monitor entries.
+    /// Called from the UI "Daten löschen" page.
+    /// </summary>
+    public void ClearAllData()
+    {
+        lock (_lock)
+        {
+            _tabs.Clear();
+            _mhList.Clear();
+            _allMessages.Clear();
+        }
+        NotifyChange();
+    }
+
+    /// <summary>Creates a thread-safe snapshot of the current state for persistence.</summary>
+    public PersistenceSnapshot CreateSnapshot()
+    {
+        lock (_lock)
+        {
+            return new PersistenceSnapshot
+            {
+                SavedAt = DateTime.Now,
+                Tabs = _tabs.Values
+                    .Select(t => new ChatTab
+                    {
+                        Key      = t.Key,
+                        Title    = t.Title,
+                        Messages = t.Messages.ToList()
+                    })
+                    .ToList(),
+                MhList          = _mhList.Values.ToList(),
+                MonitorMessages = _allMessages.ToList()
+            };
+        }
+    }
+
+    /// <summary>Restores state from a previously saved snapshot.</summary>
+    public void LoadSnapshot(PersistenceSnapshot snapshot)
+    {
+        lock (_lock)
+        {
+            _allMessages.Clear();
+            _allMessages.AddRange(snapshot.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
+
+            _tabs.Clear();
+            foreach (var tab in snapshot.Tabs)
+                _tabs[tab.Key] = tab;
+
+            _mhList.Clear();
+            foreach (var station in snapshot.MhList)
+                _mhList[station.Callsign] = station;
+        }
+        NotifyChange();
+    }
+
+    /// <summary>
     /// Process a pure position beacon: update MH position data and add to raw feed.
     /// Does NOT open or update any chat tab.
     /// </summary>
