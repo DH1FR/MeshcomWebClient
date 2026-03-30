@@ -2,6 +2,7 @@ using MeshcomWebClient.Components;
 using MeshcomWebClient.Models;
 using MeshcomWebClient.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,5 +61,23 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Log effective configuration at startup so it is visible in the log file.
+// Helpful to verify which settings are actually loaded (appsettings.json vs. env vars).
+var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
+var cfg        = app.Services.GetRequiredService<IOptions<MeshcomSettings>>().Value;
+startupLog.LogInformation(
+    "MeshCom effective configuration: " +
+    "Device={DeviceIp}:{DevicePort}  Listen={ListenIp}:{ListenPort}  " +
+    "Callsign={Callsign}  GroupFilter={GroupFilterEnabled}  Groups=[{Groups}]  " +
+    "MonitorMax={MonitorMax}  DataPath={DataPath}  LogPath={LogPath}",
+    cfg.DeviceIp, cfg.DevicePort,
+    cfg.ListenIp, cfg.ListenPort,
+    cfg.MyCallsign,
+    cfg.GroupFilterEnabled,
+    string.Join(", ", cfg.Groups),
+    cfg.MonitorMaxMessages,
+    cfg.DataPath,
+    cfg.LogPath);
 
 app.Run();
