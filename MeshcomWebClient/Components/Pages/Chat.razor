@@ -368,8 +368,9 @@
 
     private static string MonType(MeshcomMessage m)
     {
-        if (m.IsPositionBeacon)          return "POS";
-        if (m.IsOutgoing)                return "MSG";
+        if (m.IsPositionBeacon)            return "POS";
+        if (m.IsAck)                       return "ACK";
+        if (m.IsOutgoing)                  return "MSG";
         if (!string.IsNullOrEmpty(m.From)) return "MSG";
         return "SYS";
     }
@@ -377,6 +378,7 @@
     private static string MonBadgeClass(MeshcomMessage m) => MonType(m) switch
     {
         "POS" => "badge-pos",
+        "ACK" => "badge-ack",
         "MSG" when m.IsOutgoing => "badge-tx",
         "MSG" => "badge-msg",
         _ => "badge-sys"
@@ -385,6 +387,7 @@
     private static string MonRowClass(MeshcomMessage m) =>
         m.IsOutgoing ? "mon-row-tx" :
         m.IsPositionBeacon ? "mon-row-pos" :
+        m.IsAck ? "mon-row-ack" :
         !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :
         "mon-row-sys";
 

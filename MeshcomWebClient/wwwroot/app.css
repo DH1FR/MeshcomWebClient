@@ -302,6 +302,8 @@ h1:focus {
 .mon-row-tx:hover     { background: #142b1f; }
 .mon-row-pos          { background: #0d1c22; border-left-color: #1f7a8c; }
 .mon-row-pos:hover    { background: #0f252e; }
+.mon-row-ack          { opacity: 0.6; border-left-color: #b8a000; }
+.mon-row-ack:hover    { opacity: 1.0; background: #1c1c00; }
 .mon-row-sys          { opacity: 0.72; }
 .mon-row-sys:hover    { opacity: 1.0; }
 
@@ -326,6 +328,7 @@ h1:focus {
 .badge-msg { background: #0d3875; color: #93ccff; }
 .badge-tx  { background: #0d3a25; color: #6ee57a; }
 .badge-pos { background: #0d3542; color: #4de8f0; }
+.badge-ack { background: #2d2d00; color: #b8a000; }
 .badge-sys { background: #3a3a3a; color: #8b949e; }
 
 /* Direction */

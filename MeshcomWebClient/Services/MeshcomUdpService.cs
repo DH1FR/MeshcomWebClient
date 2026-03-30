@@ -34,6 +34,10 @@ public partial class MeshcomUdpService : BackgroundService
     [GeneratedRegex(@"\{\d+$")]
     private static partial Regex TrailingSequencePattern();
 
+    /// <summary>Matches APRS-style ACK messages, e.g. "DH1FR-2 :ack187".</summary>
+    [GeneratedRegex(@"^\S+ :ack\d+$")]
+    private static partial Regex AckPattern();
+
     public MeshcomUdpService(
         ILogger<MeshcomUdpService> logger,
         IOptionsMonitor<MeshcomSettings> settings,
@@ -104,6 +108,15 @@ public partial class MeshcomUdpService : BackgroundService
                                                message.Altitude, "Node");
                             }
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
+                            _chatService.AddRawMessage(message);
+                        }
+                        else if (message.IsAck)
+                        {
+                            // APRS ACK – monitor only, no chat tab
+                            Status.RxCount++;
+                            Status.LastRxTime = message.Timestamp;
+                            Status.LastRxFrom = message.From;
+                            NotifyStatusChange();
                             _chatService.AddRawMessage(message);
                         }
                         else if (message.IsPositionBeacon)
@@ -305,6 +318,9 @@ public partial class MeshcomUdpService : BackgroundService
             if (!isPositionBeacon)
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
 
+            // Detect APRS-style ACK: "DH1FR-2 :ack187"
+            var isAck = !isPositionBeacon && AckPattern().IsMatch(msg);
+
             // src_type:"node" = local device packet; rssi/snr are 0 and not meaningful
             var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
             var isNodePacket = string.Equals(srcType, "node", StringComparison.OrdinalIgnoreCase);
@@ -365,7 +381,8 @@ public partial class MeshcomUdpService : BackgroundService
                 Latitude         = lat,
                 Longitude        = lon,
                 Altitude         = alt,
-                IsPositionBeacon = isPositionBeacon
+                IsPositionBeacon = isPositionBeacon,
+                IsAck            = isAck
             };
         }
         catch (JsonException ex)

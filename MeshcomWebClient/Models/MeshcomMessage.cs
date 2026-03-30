@@ -43,6 +43,12 @@ public class MeshcomMessage
     /// <summary>True when this packet is a pure position beacon (type "pos") with no chat text.</summary>
     public bool IsPositionBeacon { get; set; }
 
+    /// <summary>
+    /// True when this is an APRS-style message acknowledgement (text matches "&lt;call&gt; :ack&lt;id&gt;").
+    /// ACKs are shown in the monitor only and do not open or update a chat tab.
+    /// </summary>
+    public bool IsAck { get; set; }
+
     /// <summary>True if the message is a broadcast (destination "*" or "CQCQCQ").</summary>
     public bool IsBroadcast =>
         string.Equals(To, "*", StringComparison.OrdinalIgnoreCase) ||
