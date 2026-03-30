@@ -51,9 +51,11 @@ public partial class MeshcomUdpService : BackgroundService
         IOptionsMonitor<MeshcomSettings> settings,
         ChatService chatService)
     {
-        _logger = logger;
+        _logger    = logger;
         _chatService = chatService;
-        _settings = settings.CurrentValue;
+        _settings  = settings.CurrentValue;
+
+        _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -207,6 +209,15 @@ public partial class MeshcomUdpService : BackgroundService
         {
             _logger.LogError(ex, "Failed to send UDP registration packet to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
         }
+    }
+
+    private Task SendAutoReplyAsync(string callsign)
+    {
+        if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
+            return Task.CompletedTask;
+
+        _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
+        return SendMessageAsync(callsign, _settings.AutoReplyText);
     }
 
     /// <summary>

@@ -54,4 +54,17 @@ public class MeshcomSettings
     /// Data is loaded on startup and saved every 5 minutes and on graceful shutdown.
     /// </summary>
     public string DataPath { get; set; } = @"C:\Temp\MeshcomData";
+
+    /// <summary>
+    /// When true, an automatic reply is sent once when a brand-new direct chat tab is
+    /// opened by an incoming message (i.e. first contact from a callsign).
+    /// Default is false.
+    /// </summary>
+    public bool AutoReplyEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Text sent as the automatic reply. Only used when <see cref="AutoReplyEnabled"/> is true.
+    /// </summary>
+    public string AutoReplyText { get; set; } =
+        "---=== MeshcomWebClient - https://github.com/DH1FR/MeshcomWebClient ===---";
 }

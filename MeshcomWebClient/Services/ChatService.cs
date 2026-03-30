@@ -19,6 +19,13 @@ public class ChatService
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;
 
+    /// <summary>
+    /// Raised when a brand-new direct (1:1) tab is created by an incoming message.
+    /// The argument is the remote callsign. Not raised for broadcast (*) or group (#) tabs,
+    /// and not raised when tabs are restored from a snapshot or opened manually.
+    /// </summary>
+    public event Action<string>? OnNewDirectTab;
+
     public ChatService(IOptions<MeshcomSettings> settings)
     {
         _settings = settings.Value;
@@ -87,7 +94,7 @@ public class ChatService
             || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
 
-        ChatTab? tab = tabAllowed ? GetOrCreateTab(tabKey) : null;
+        ChatTab? tab = tabAllowed ? GetOrCreateTab(tabKey, triggerAutoReply: true) : null;
         lock (_lock)
         {
             AppendToMonitor(message);
@@ -337,18 +344,26 @@ public class ChatService
             _allMessages.RemoveRange(0, _allMessages.Count - _settings.MonitorMaxMessages);
     }
 
-    private ChatTab GetOrCreateTab(string key)
+    private ChatTab GetOrCreateTab(string key, bool triggerAutoReply = false)
     {
-        return _tabs.GetOrAdd(key, k => new ChatTab
+        var newTab = new ChatTab
         {
-            Key = k,
-            Title = k switch
+            Key   = key,
+            Title = key switch
             {
-                "*" => "Alle",
-                _ when k.StartsWith('#') => k,
-                _ => k
+                "*"              => "Alle",
+                _ when key.StartsWith('#') => key,
+                _                => key
             }
-        });
+        };
+
+        var tab    = _tabs.GetOrAdd(key, newTab);
+        bool wasNew = ReferenceEquals(tab, newTab);
+
+        if (triggerAutoReply && wasNew && key != "*" && !key.StartsWith('#'))
+            OnNewDirectTab?.Invoke(key);
+
+        return tab;
     }
 
     private void NotifyChange()
