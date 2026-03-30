@@ -9,11 +9,11 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ## 💡 Motivation
 
-MeshCom erinnert mich immer ein wenig an die schöne alte **Packet-Radio**-Zeit – digitale Textkommunikation über Funk, einfach und direkt.
+MeshCom always reminds me a little of the good old **Packet Radio** days – digital text communication over radio, simple and direct.
 
-Leider kannte ich keine geeignete Software, die über einen **Web-Server** für alle Geräte (PC, Tablet, Smartphone) eine Bedienoberfläche für MeshCom im internen Netzwerk bereitstellt. Aus diesem Grund entstand dieser **MeshCom Web Client**.
+However, I could not find any suitable software that provides a **web server** interface for MeshCom accessible from any device (PC, tablet, smartphone) within the local network. That is why I created this **MeshCom Web Client**.
 
-Die Anwendung kann auf **Windows** oder **Linux** gestartet werden und stellt über eine einfache URL einen vollständigen Web-Client für MeshCom zur Verfügung – ohne Installation auf dem Endgerät, direkt im Browser.
+The application runs on **Windows** or **Linux** and makes a full web client for MeshCom available via a simple URL – no installation required on the end device, everything runs directly in the browser.
 
 ---
 
