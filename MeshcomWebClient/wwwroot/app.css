@@ -351,6 +351,7 @@ h1:focus {
 .mon-text::before { content: ''; }
 .mon-pos     { color: #56d4db; }
 .mon-alt     { color: #8b949e; }
+.mon-dist    { color: #8b949e; }
 .mon-sys     { color: #6e7681; font-size: 11px; }
 
 /* Signal */

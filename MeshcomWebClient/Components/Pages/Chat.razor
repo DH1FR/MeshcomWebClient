@@ -1,6 +1,7 @@
 @page "/"
 @using MeshcomWebClient.Models
 @using MeshcomWebClient.Services
+@using MeshcomWebClient.Helpers
 @using Microsoft.Extensions.Options
 @rendermode InteractiveServer
 @inject ChatService ChatService
@@ -116,6 +117,11 @@
                             @if (m.Altitude.HasValue)
                             {
                                 <span class="mon-alt">&nbsp;·&nbsp;@m.Altitude&nbsp;m</span>
+                            }
+                            @{ var dist = MonDistance(m); }
+                            @if (!string.IsNullOrEmpty(dist))
+                            {
+                                <span class="mon-dist">&nbsp;·&nbsp;📏&nbsp;@dist</span>
                             }
                         </span>
                     }
@@ -373,4 +379,16 @@
 
     private static string MonTruncate(string s, int max) =>
         s.Length <= max ? s : s[..max] + "…";
+
+    private string MonDistance(MeshcomMessage m)
+    {
+        if (!_status.OwnLatitude.HasValue || !_status.OwnLongitude.HasValue ||
+            !m.Latitude.HasValue || !m.Longitude.HasValue)
+            return string.Empty;
+
+        var km = GeoHelper.CalculateDistanceKm(
+            _status.OwnLatitude.Value, _status.OwnLongitude.Value,
+            m.Latitude.Value, m.Longitude.Value);
+        return GeoHelper.FormatDistance(km);
+    }
 }

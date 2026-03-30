@@ -80,11 +80,18 @@ public class ChatService
             tabKey = "#" + message.To;
         }
 
-        var tab = GetOrCreateTab(tabKey);
+        // For group messages, only auto-create a tab if the filter is disabled or the group is whitelisted.
+        // Manually opened tabs (via OpenTab) are not affected by this restriction.
+        bool isGroup = tabKey.StartsWith('#');
+        bool tabAllowed = !isGroup
+            || !_settings.GroupFilterEnabled
+            || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
+
+        ChatTab? tab = tabAllowed ? GetOrCreateTab(tabKey) : null;
         lock (_lock)
         {
             AppendToMonitor(message);
-            tab.Messages.Add(message);
+            tab?.Messages.Add(message);
         }
 
         UpdateMhList(message);

@@ -36,4 +36,16 @@ public class MeshcomSettings
     /// Default is 1000.
     /// </summary>
     public int MonitorMaxMessages { get; set; } = 1000;
+
+    /// <summary>
+    /// When true, only groups listed in <see cref="Groups"/> automatically get a chat tab.
+    /// When false (default), every incoming group message opens a tab regardless of <see cref="Groups"/>.
+    /// </summary>
+    public bool GroupFilterEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Whitelist of group names (e.g. "#OE", "#Test") for which a chat tab is automatically
+    /// opened when a message arrives. Only evaluated when <see cref="GroupFilterEnabled"/> is true.
+    /// </summary>
+    public List<string> Groups { get; set; } = [];
 }
