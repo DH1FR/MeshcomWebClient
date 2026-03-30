@@ -184,7 +184,9 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 ## Requirements
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+> 💡 **Kein Build nötig:** Fertige Binaries für Windows und Linux sind unter [Releases](https://github.com/DH1FR/MeshcomWebClient/releases/latest) verfügbar.
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) *(nur für Build from source)*
 - A reachable MeshCom node running firmware [v4.35+](https://github.com/icssw-org/MeshCom-Firmware/releases) with EXTUDP enabled
 - UDP port 1799 open (Windows Firewall / router)
 
@@ -296,10 +298,102 @@ docker compose down --rmi local
 
 ---
 
-## License
+## 💻 Direkte Installation (ohne Docker)
 
-MIT – see [LICENSE](LICENSE)
+Docker ist die empfohlene Installationsmethode. Wer keinen Docker betreiben möchte, kann das Binary direkt herunterladen – es ist **framework-dependent**, d. h. die **.NET 10 Runtime** muss auf dem Zielgerät installiert sein (kein SDK nötig).
+
+> 📦 **Download:** [GitHub Releases](https://github.com/DH1FR/MeshcomWebClient/releases/latest)
 
 ---
 
-© by Ralf Altenbrand (DH1FR) 03/2026
+### Windows
+
+**Voraussetzungen:**
+- [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (ASP.NET Core Runtime reicht aus)
+
+```powershell
+# ZIP entpacken, z. B. nach C:\meshcom
+Expand-Archive MeshcomWebClient-vX.Y.Z-win-x64.zip -DestinationPath C:\meshcom
+
+# Konfiguration anpassen
+notepad C:\meshcom\appsettings.json   # DeviceIp, MyCallsign eintragen
+
+# Starten
+cd C:\meshcom
+.\MeshcomWebClient.exe
+```
+
+Browser öffnen: **http://localhost:5162**
+
+> Soll die App beim Windows-Start automatisch laufen, kann sie als Windows-Dienst registriert werden:
+> ```powershell
+> sc.exe create MeshcomWebClient binPath="C:\meshcom\MeshcomWebClient.exe" start=auto
+> sc.exe start MeshcomWebClient
+> ```
+
+---
+
+### Linux (systemd)
+
+**Voraussetzungen:**
+- [.NET 10 ASP.NET Core Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
+
+```bash
+# .NET 10 Runtime installieren (Debian / Ubuntu / Raspberry Pi OS)
+sudo apt-get update && sudo apt-get install -y aspnetcore-runtime-10.0
+
+# Tarball entpacken
+mkdir meshcom && tar -xzf MeshcomWebClient-vX.Y.Z-linux-x64.tar.gz -C meshcom
+cd meshcom
+
+# Konfiguration anpassen (MyCallsign, DeviceIp usw.)
+nano appsettings.json
+
+# Als systemd-Service installieren (startet automatisch beim Booten)
+sudo bash install.sh
+```
+
+Web-Oberfläche: **http://\<Linux-IP\>:5162**
+
+**Nützliche Befehle nach der Installation:**
+```bash
+journalctl -u meshcom-webclient -f     # Live-Log
+systemctl status meshcom-webclient     # Status
+systemctl restart meshcom-webclient    # Neustart nach Config-Änderung
+```
+
+---
+
+### Konfigurationshinweise
+
+Die mitgelieferte `appsettings.json` enthält Platzhalter – vor dem ersten Start **müssen** angepasst werden:
+
+| Schlüssel | Beschreibung | Beispiel |
+|-----------|-------------|---------|
+| `MyCallsign` | Eigenes Rufzeichen | `DH1FR-2` |
+| `DeviceIp` | IP-Adresse des MeshCom-Nodes | `192.168.1.60` |
+| `LogPath` | Verzeichnis für Log-Dateien | `./logs` / `/var/log/meshcom` |
+| `DataPath` | Verzeichnis für persistente Daten | `./data` / `/opt/meshcom/data` |
+
+---
+
+## ⚖️ Rechtliches / Legal
+
+### Copyright
+© 2025–2026 Ralf Altenbrand (DH1FR) · Alle Rechte vorbehalten.
+
+### Nutzung
+Diese Software ist für **lizenzierte Funkamateure** zur **privaten, nichtkommerziellen Nutzung** freigegeben.  
+Eine kommerzielle Nutzung ist ohne ausdrückliche schriftliche Genehmigung des Autors nicht gestattet.
+
+### Haftungsausschluss
+**Die Benutzung erfolgt ausdrücklich auf eigene Gefahr.**  
+Der Autor übernimmt keinerlei Haftung für Schäden jeglicher Art – insbesondere nicht für Schäden an Hardware, Netzwerkinfrastruktur, Funkanlagen oder Datenverluste –, die durch die Nutzung dieser Software entstehen.  
+Die Software wird ohne jegliche Gewährleistung bereitgestellt.
+
+### Lizenz
+Siehe [LICENSE](LICENSE)
+
+---
+
+© by Ralf Altenbrand (DH1FR) 2025–2026

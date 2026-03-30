@@ -1,0 +1,64 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish Windows x64 (framework-dependent)
+        run: |
+          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+            -c Release \
+            -r win-x64 \
+            --no-self-contained \
+            -p:PublishSingleFile=true \
+            -o ./publish/win-x64
+
+      - name: Publish Linux x64 (framework-dependent)
+        run: |
+          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+            -c Release \
+            -r linux-x64 \
+            --no-self-contained \
+            -p:PublishSingleFile=true \
+            -o ./publish/linux-x64
+
+      - name: Package Windows ZIP
+        run: |
+          cp deploy/appsettings.template.json publish/win-x64/appsettings.json
+          cd publish/win-x64
+          zip -r ../../MeshcomWebClient-${{ github.ref_name }}-win-x64.zip .
+
+      - name: Package Linux tarball
+        run: |
+          cp deploy/appsettings.template.json publish/linux-x64/appsettings.json
+          cp deploy/install.sh publish/linux-x64/
+          cp deploy/meshcom-webclient.service publish/linux-x64/
+          chmod +x publish/linux-x64/MeshcomWebClient
+          chmod +x publish/linux-x64/install.sh
+          tar -czf MeshcomWebClient-${{ github.ref_name }}-linux-x64.tar.gz \
+            -C publish/linux-x64 .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            MeshcomWebClient-${{ github.ref_name }}-win-x64.zip
+            MeshcomWebClient-${{ github.ref_name }}-linux-x64.tar.gz
+          generate_release_notes: true

@@ -23,7 +23,15 @@ chown $USER:$USER $INSTALL_DIR $LOG_DIR
 
 # Copy files
 cp -r ./* $INSTALL_DIR/
-cp appsettings.linux.json $INSTALL_DIR/appsettings.json
+
+# Use platform config if available (source clone), otherwise use bundled appsettings.json (binary release)
+if [ -f "appsettings.linux.json" ]; then
+    cp appsettings.linux.json $INSTALL_DIR/appsettings.json
+    echo "[+] Config: appsettings.linux.json"
+else
+    echo "[+] Config: appsettings.json (bitte MyCallsign und DeviceIp prüfen!)"
+fi
+
 chmod +x $INSTALL_DIR/MeshcomWebClient
 chown -R $USER:$USER $INSTALL_DIR
 
