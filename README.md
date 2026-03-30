@@ -165,6 +165,99 @@ Then open `http://localhost:5162` (or `http://<your-ip>:5162` for LAN access).
 
 ---
 
+## 🐳 Docker – Deployment auf Linux
+
+### Voraussetzungen
+
+```bash
+# Docker + Docker Compose Plugin installieren (Debian / Ubuntu / Raspberry Pi OS)
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin
+
+# Aktuellen Benutzer zur docker-Gruppe hinzufügen (kein sudo nötig)
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### Erstkonfiguration & Start
+
+```bash
+# Repository klonen
+git clone https://github.com/DH1FR/MeshcomWebClient.git
+cd MeshcomWebClient
+
+# Optionale Konfigurationsdatei anlegen (überschreibt die eingebetteten Defaults)
+cp deploy/appsettings.linux.json appsettings.json
+nano appsettings.json          # DeviceIp, MyCallsign, Groups usw. anpassen
+
+# Image bauen und Container starten
+docker compose up -d --build
+```
+
+Der Container läuft danach im Hintergrund und startet automatisch neu (`restart: unless-stopped`).  
+Web-Oberfläche: **http://\<Linux-IP\>:5162**
+
+> **Hinweis:** `network_mode: host` ist zwingend erforderlich, damit der Container UDP-Pakete vom MeshCom-Gerät empfangen kann.
+
+### Konfiguration anpassen
+
+Entweder in `appsettings.json` (neben `docker-compose.yml`) oder direkt als Umgebungsvariablen in `docker-compose.yml`:
+
+```yaml
+environment:
+  - Meshcom__DeviceIp=192.168.1.60
+  - Meshcom__MyCallsign=DH1FR-2
+  - Meshcom__GroupFilterEnabled=true
+  - Meshcom__Groups__0=#OE
+  - Meshcom__Groups__1=#Test
+```
+
+Nach jeder Änderung an `docker-compose.yml` oder `appsettings.json`:
+
+```bash
+docker compose up -d
+```
+
+---
+
+### 🔄 Update nach Code-Änderungen
+
+Neue Version aus dem Repository holen, Image neu bauen und Container ersetzen:
+
+```bash
+cd MeshcomWebClient
+
+# Aktuelle Änderungen holen
+git pull origin master
+
+# Image neu bauen und Container ersetzen (kurze Downtime)
+docker compose up -d --build
+
+# Altes, nicht mehr verwendetes Image aufräumen (optional)
+docker image prune -f
+```
+
+### Nützliche Docker-Befehle
+
+```bash
+# Status des Containers prüfen
+docker compose ps
+
+# Live-Logs anzeigen (Strg+C zum Beenden)
+docker compose logs -f
+
+# Container stoppen
+docker compose stop
+
+# Container stoppen und entfernen (Konfiguration & Logs bleiben erhalten)
+docker compose down
+
+# Container stoppen, entfernen und Image löschen (kompletter Reset)
+docker compose down --rmi local
+```
+
+---
+
 ## License
 
 MIT – see [LICENSE](LICENSE)
