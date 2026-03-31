@@ -15,6 +15,16 @@ public class ChatService
     private readonly List<MeshcomMessage> _allMessages = [];
     private readonly object _lock = new();
     private readonly MeshcomSettings _settings;
+    private readonly ILogger<ChatService> _logger;
+
+    /// <summary>
+    /// Rolling deduplication cache.
+    /// Key = "seq:{From}:{SeqNr}"  (primary, when SequenceNumber is present)
+    ///       "txt:{From}:{To}:{Text}" (fallback, when no sequence number).
+    /// Value = time of first receipt. Entries older than <see cref="DedupWindow"/> are pruned on each check.
+    /// </summary>
+    private readonly Dictionary<string, DateTime> _seenMessageKeys = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan DedupWindow = TimeSpan.FromMinutes(10);
 
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;
@@ -26,9 +36,10 @@ public class ChatService
     /// </summary>
     public event Action<string>? OnNewDirectTab;
 
-    public ChatService(IOptions<MeshcomSettings> settings)
+    public ChatService(IOptions<MeshcomSettings> settings, ILogger<ChatService> logger)
     {
         _settings = settings.Value;
+        _logger   = logger;
     }
 
     /// <summary>All open tabs.</summary>
@@ -61,9 +72,19 @@ public class ChatService
 
     /// <summary>
     /// Route an incoming message to the correct tab. Creates tab automatically if needed.
+    /// Duplicate packets (same sender + sequence number within <see cref="DedupWindow"/>) are silently dropped.
     /// </summary>
     public void AddIncomingMessage(MeshcomMessage message)
     {
+        // Deduplication: Meshcom 4.0 may deliver the same packet multiple times via different
+        // mesh routes. Use the sender-assigned sequence number as the primary key.
+        if (IsDuplicate(message))
+        {
+            _logger.LogDebug("Duplicate message suppressed: From={From} Seq={Seq} Text={Text}",
+                message.From, message.SequenceNumber, message.Text);
+            return;
+        }
+
         // Determine tab key based on destination:
         //   Broadcast from known correspondent     → sender's direct tab
         //   Broadcast from unknown station         → tab "*" ("Alle")
@@ -214,6 +235,7 @@ public class ChatService
             _tabs.Clear();
             _mhList.Clear();
             _allMessages.Clear();
+            _seenMessageKeys.Clear();
         }
         NotifyChange();
     }
@@ -286,6 +308,37 @@ public class ChatService
         lock (_lock)
         {
             return tab.Messages.ToList();
+        }
+    }
+
+    /// <summary>
+    /// Returns true when an identical message was already processed within <see cref="DedupWindow"/>.
+    /// Registers the message as seen on first encounter.
+    /// </summary>
+    private bool IsDuplicate(MeshcomMessage message)
+    {
+        string key = !string.IsNullOrEmpty(message.SequenceNumber)
+            ? $"seq:{message.From}:{message.SequenceNumber}"
+            : $"txt:{message.From}:{message.To}:{message.Text}";
+
+        lock (_lock)
+        {
+            var now    = DateTime.Now;
+            var cutoff = now - DedupWindow;
+
+            // Prune expired entries to keep the dictionary from growing unbounded
+            var expired = _seenMessageKeys
+                .Where(kv => kv.Value < cutoff)
+                .Select(kv => kv.Key)
+                .ToList();
+            foreach (var k in expired)
+                _seenMessageKeys.Remove(k);
+
+            if (_seenMessageKeys.ContainsKey(key))
+                return true;
+
+            _seenMessageKeys[key] = now;
+            return false;
         }
     }
 
