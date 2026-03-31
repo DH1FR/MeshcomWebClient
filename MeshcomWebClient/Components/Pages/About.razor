@@ -9,6 +9,7 @@
         <div class="about-icon">📡</div>
         <h1 class="about-title">MeshCom Web Client</h1>
         <p class="about-tagline">Blazor Server &nbsp;·&nbsp; .NET 10</p>
+        <p class="about-version">v@_version</p>
 
         <div class="about-divider"></div>
 
@@ -40,6 +41,11 @@
 </div>
 
 @code {
+    private static readonly string _version =
+        typeof(About).Assembly.GetName().Version is { } v
+            ? $"{v.Major}.{v.Minor}.{v.Build}"
+            : "–";
+
     private static readonly string _buildDate =
         typeof(About).Assembly
             .GetCustomAttributes<AssemblyMetadataAttribute>()
