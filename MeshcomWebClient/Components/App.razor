@@ -25,6 +25,55 @@
             var el = document.getElementById(id);
             if (el) el.scrollTop = el.scrollHeight;
         };
+
+        // ── Notification sound via Web Audio API (no audio file required) ──────
+        (function () {
+            var _audioCtx = null;
+
+            function getAudioContext() {
+                if (!_audioCtx) {
+                    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                return _audioCtx;
+            }
+
+            // Unlock AudioContext on first user interaction (browser autoplay policy)
+            document.addEventListener('click', function () {
+                var ctx = getAudioContext();
+                if (ctx.state === 'suspended') ctx.resume();
+            }, { passive: true });
+
+            function playBeep(ctx) {
+                var now = ctx.currentTime;
+                // Two-tone beep: 880 Hz then 660 Hz
+                [0, 0.18].forEach(function (offset, i) {
+                    var osc  = ctx.createOscillator();
+                    var gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = i === 0 ? 880 : 660;
+                    gain.gain.setValueAtTime(0.0, now + offset);
+                    gain.gain.linearRampToValueAtTime(0.25, now + offset + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.15);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.15);
+                });
+            }
+
+            window.playNotificationBeep = function () {
+                try {
+                    var ctx = getAudioContext();
+                    if (ctx.state === 'suspended') {
+                        ctx.resume().then(function () { playBeep(ctx); });
+                    } else {
+                        playBeep(ctx);
+                    }
+                } catch (e) {
+                    console.warn('Audio notification failed:', e);
+                }
+            };
+        })();
     </script>
 </body>
 

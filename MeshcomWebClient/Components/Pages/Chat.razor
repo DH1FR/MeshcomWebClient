@@ -178,6 +178,12 @@
 
     @* ===== STATUS BAR ===== *@
     <div class="status-bar">
+        <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
+                @onclick="() => _soundEnabled = !_soundEnabled"
+                title="@(_soundEnabled ? "Ton ausschalten" : "Ton einschalten")">
+            @(_soundEnabled ? "🔔" : "🔕")
+        </button>
+        <span class="status-sep">|</span>
         <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
             @(_status.IsListening ? "🟢" : "🔴") UDP @(_status.IsListening ? "Aktiv" : "Inaktiv")
         </span>
@@ -244,6 +250,9 @@
     private MeshcomSettings _settings = new();
     private bool _showMonitor = true;
     private bool _scrollMessages;
+    private bool _soundEnabled = true;
+    private bool _playSound;
+    private DateTime _lastNotificationTime = DateTime.MinValue;
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptions<MeshcomSettings> SettingsOptions { get; set; } = default!;
@@ -264,10 +273,14 @@
         if (_scrollMessages)
         {
             _scrollMessages = false;
-            try
-            {
-                await JS.InvokeVoidAsync("scrollToBottom", "tab-messages");
-            }
+            try { await JS.InvokeVoidAsync("scrollToBottom", "tab-messages"); }
+            catch (JSException) { }
+        }
+
+        if (_playSound)
+        {
+            _playSound = false;
+            try { await JS.InvokeVoidAsync("playNotificationBeep"); }
             catch (JSException) { }
         }
     }
@@ -331,6 +344,19 @@
         if (!string.IsNullOrEmpty(_activeTabKey))
             ChatService.ClearUnread(_activeTabKey);
         _scrollMessages = true;
+
+        // Sound notification: play beep when a new direct message to own callsign arrives
+        if (_soundEnabled)
+        {
+            var latestDirect = _allMessages.FirstOrDefault(m =>
+                !m.IsOutgoing &&
+                string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
+            if (latestDirect != null && latestDirect.Timestamp > _lastNotificationTime)
+            {
+                _lastNotificationTime = latestDirect.Timestamp;
+                _playSound = true;
+            }
+        }
     }
 
     private void SelectTab(string key)

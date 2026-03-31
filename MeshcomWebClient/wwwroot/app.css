@@ -741,6 +741,19 @@ h1:focus {
 .status-warn { color: #d29922; }
 .status-pos-alt { color: #6c757d; }
 
+.status-mute-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+}
+.status-mute-btn:hover { opacity: 1; }
+.status-mute-off { opacity: 0.4; }
+
 .rssi-good { color: #3fb950; }
 .rssi-fair { color: #d29922; }
 .rssi-weak { color: #f85149; }
