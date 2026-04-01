@@ -122,7 +122,7 @@ public partial class MeshcomUdpService : BackgroundService
                             if (message.SequenceNumber != null)
                                 _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
-                            _chatService.AddRawMessage(message);
+                            // Do not add node echoes to the monitor – the TX entry is already shown there.
                         }
                         else if (message.IsAck)
                         {
