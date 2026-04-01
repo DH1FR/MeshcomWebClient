@@ -444,7 +444,9 @@
         if (string.IsNullOrWhiteSpace(_messageText) || _activeTab == null)
             return;
 
-        var destination = _activeTab.Key == "*" ? "CQCQCQ" : _activeTab.Key;
+        // Strip leading '#' for group tabs – the node uses the raw group number (e.g. "262"),
+        // the '#' is an internal UI convention only.
+        var destination = _activeTab.Key == "*" ? "CQCQCQ" : _activeTab.Key.TrimStart('#');
         await UdpService.SendMessageAsync(destination, _messageText);
         _messageText = string.Empty;
     }
