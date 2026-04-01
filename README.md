@@ -140,8 +140,8 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "LogRetainDays":      30,              // log file retention in days
   "LogUdpTraffic":      false,           // log every UDP packet to file
   "MonitorMaxMessages": 1000,            // max monitor history (oldest dropped)
-  "GroupFilterEnabled": false,           // only show whitelisted group tabs
-  "Groups":             ["#262"],        // whitelisted groups (GroupFilterEnabled=true)
+  "GroupFilterEnabled": true,            // only show whitelisted group tabs
+  "Groups":             ["#20","#262"],  // whitelisted groups (GroupFilterEnabled=true)
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
   "AutoReplyText":      "..."            // auto-reply message text
@@ -225,9 +225,21 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 > 💡 **No build required:** Ready-to-run binaries for Windows and Linux are available under [Releases](https://github.com/DH1FR/MeshcomWebClient/releases/latest).
 
+- [.NET 10 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) *(ASP.NET Core Runtime, required to run the Windows binary)*
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) *(only required for build from source)*
 - A reachable MeshCom node running firmware [v4.35+](https://github.com/icssw-org/MeshCom-Firmware/releases) with EXTUDP enabled
 - UDP port 1799 open (Windows Firewall / router)
+
+### ⚠️ Windows SmartScreen warning
+
+When running the `.exe` for the first time, Windows may show **"Windows protected your PC"**.  
+This happens because the binary is not code-signed.
+
+**To run it anyway:**
+1. Click **"More info"** in the SmartScreen dialog
+2. Click **"Run anyway"**
+
+**Alternative:** Right-click the `.exe` → **Properties** → check **"Unblock"** → OK
 
 ---
 
