@@ -67,4 +67,27 @@ public class MeshcomSettings
     /// </summary>
     public string AutoReplyText { get; set; } =
         "---=== MeshcomWebClient - https://github.com/DH1FR/MeshcomWebClient ===---";
+
+    /// <summary>
+    /// When true, a beacon message is sent periodically to <see cref="BeaconGroup"/>.
+    /// Default is false.
+    /// </summary>
+    public bool BeaconEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Target group for the beacon (e.g. "#262"). The leading '#' is stripped before sending.
+    /// Only used when <see cref="BeaconEnabled"/> is true.
+    /// </summary>
+    public string BeaconGroup { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Text transmitted as the beacon. Only used when <see cref="BeaconEnabled"/> is true.
+    /// </summary>
+    public string BeaconText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Interval between beacon transmissions in hours. Minimum value is 1.
+    /// Only used when <see cref="BeaconEnabled"/> is true. Default is 1.
+    /// </summary>
+    public int BeaconIntervalHours { get; set; } = 1;
 }

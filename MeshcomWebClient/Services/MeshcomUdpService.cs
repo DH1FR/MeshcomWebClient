@@ -83,6 +83,10 @@ public partial class MeshcomUdpService : BackgroundService
         // Without this, the device does not know where to deliver UDP data.
         await RegisterWithDeviceAsync();
 
+        // Start periodic beacon transmitter (fire-and-forget, cancelled via stoppingToken).
+        if (_settings.BeaconEnabled)
+            _ = RunBeaconAsync(stoppingToken);
+
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -228,6 +232,42 @@ public partial class MeshcomUdpService : BackgroundService
 
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         return SendMessageAsync(callsign, _settings.AutoReplyText);
+    }
+
+    /// <summary>
+    /// Sends a periodic beacon to <see cref="MeshcomSettings.BeaconGroup"/> every
+    /// <see cref="MeshcomSettings.BeaconIntervalHours"/> hours until cancellation.
+    /// The first transmission occurs after one full interval (not immediately on startup).
+    /// </summary>
+    private async Task RunBeaconAsync(CancellationToken stoppingToken)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.BeaconGroup) || string.IsNullOrWhiteSpace(_settings.BeaconText))
+        {
+            _logger.LogWarning("Beacon is enabled but BeaconGroup or BeaconText is not configured – beacon disabled.");
+            return;
+        }
+
+        var hours = _settings.BeaconIntervalHours < 1 ? 1 : _settings.BeaconIntervalHours;
+        if (hours != _settings.BeaconIntervalHours)
+            _logger.LogWarning("BeaconIntervalHours {Configured} is below minimum – using 1h.", _settings.BeaconIntervalHours);
+        var interval = TimeSpan.FromHours(hours);
+        _logger.LogInformation("Beacon started – group {Group}, interval {Hours}h, text: {Text}",
+            _settings.BeaconGroup, hours, _settings.BeaconText);
+
+        using var timer = new PeriodicTimer(interval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stoppingToken))
+            {
+                var destination = _settings.BeaconGroup.TrimStart('#');
+                _logger.LogInformation("Sending beacon to {Group}", _settings.BeaconGroup);
+                await SendMessageAsync(destination, _settings.BeaconText, _settings.BeaconGroup);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal shutdown – nothing to do.
+        }
     }
 
     /// <summary>
