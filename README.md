@@ -82,6 +82,12 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### ℹ️ About page
 - Displays assembly version (e.g. `v1.0.1`), build timestamp and links
 
+### 📡 Beacon (Bake)
+- **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
+- Interval is configurable in whole hours (minimum 1 h)
+- Enabled / disabled via `BeaconEnabled` flag in `appsettings.json`
+- Beacon appears in the monitor feed and in the corresponding group chat tab
+
 ### 📝 Logging (Serilog)
 - Rolling daily log files with configurable retention
 - Optional UDP traffic log (`LogUdpTraffic`) for offline analysis
@@ -144,7 +150,11 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "Groups":             ["#20","#262"],  // whitelisted groups (GroupFilterEnabled=true)
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
-  "AutoReplyText":      "..."            // auto-reply message text
+  "AutoReplyText":      "...",           // auto-reply message text
+  "BeaconEnabled":      false,           // send periodic beacon (Bake)
+  "BeaconGroup":        "#262",          // target group for beacon
+  "BeaconText":         "...",           // beacon text
+  "BeaconIntervalHours": 1               // beacon interval in hours (minimum 1)
 }
 ```
 
