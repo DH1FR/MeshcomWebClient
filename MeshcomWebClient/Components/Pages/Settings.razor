@@ -147,8 +147,11 @@
                 <label>JSON-Datei</label>
                 <input type="text" @bind="_model.TelemetryFilePath" placeholder="C:\Temp\telemetry.json" />
 
-                <label>Gruppe</label>
-                <input type="text" @bind="_model.TelemetryGroup" placeholder="#262" />
+                <label>
+                    Ziel<br />
+                    <small>(Gruppe z.&nbsp;B. #262, * für Alle, oder Rufzeichen)</small>
+                </label>
+                <input type="text" @bind="_model.TelemetryGroup" placeholder="#262 / * / OE1KBC-1" />
 
                 <label>Interval (Stunden, min. 1)</label>
                 <input type="number" min="1" @bind="_model.TelemetryIntervalHours" />
