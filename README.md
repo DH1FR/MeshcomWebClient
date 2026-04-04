@@ -101,6 +101,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Status indicator** in the status bar analogue to the beacon
 - Example message sent over LoRa: `TM: temp.out=15.5°C qfe=1013.2hPa PV=3.8kW`
 - Source JSON format: flat key/value object with numeric sensor values (e.g. produced by Home Assistant)
+- 📖 **[Home Assistant integration guide](docs/homeassistant-telemetry.md)** – complete example with weather station sensors, shell command and automation
 
 ### 📝 Logging (Serilog)
 - Rolling daily log files with configurable retention
