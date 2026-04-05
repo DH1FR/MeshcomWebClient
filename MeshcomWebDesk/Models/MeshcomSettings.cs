@@ -66,7 +66,7 @@ public class MeshcomSettings
     /// Text sent as the automatic reply. Only used when <see cref="AutoReplyEnabled"/> is true.
     /// </summary>
     public string AutoReplyText { get; set; } =
-        "---=== MeshcomWebClient - https://github.com/DH1FR/MeshcomWebClient ===---";
+        "---=== MeshcomWebDesk - https://github.com/DH1FR/MeshcomWebDesk ===---";
 
     /// <summary>
     /// When true, a beacon message is sent periodically to <see cref="BeaconGroup"/>.
