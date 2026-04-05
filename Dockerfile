@@ -3,7 +3,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY MeshcomWebDesk/MeshcomWebDesk.csproj MeshcomWebDesk/
-COPY MeshcomWebClient.Client/MeshcomWebClient.Client.csproj MeshcomWebClient.Client/
 RUN dotnet restore MeshcomWebDesk/MeshcomWebDesk.csproj
 
 COPY . .
