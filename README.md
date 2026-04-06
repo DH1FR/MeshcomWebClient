@@ -80,7 +80,8 @@ and makes a full web client for MeshCom available via a simple URL
 - Auto-save every 5 minutes; data stored in `DataPath` (configurable)
 
 ### ℹ️ About page
-- Displays assembly version (e.g. `v1.0.1`), build timestamp and links
+- Displays assembly version (e.g. `v1.4.0`), build timestamp and links
+- Author contact: [dh1fr@darc.de](mailto:dh1fr@darc.de)
 
 ### ⚙️ Settings page
 - Web-based configuration editor at `/settings` – edit all settings directly in the browser
@@ -242,7 +243,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 | Direction | Example |
 |-----------|---------|
-| Registration | `{"type":"info","src":"NOCALL-2","dst":"*","msg":"info"}` |
+| Registration | `{"type":"info","src":"NOCALL-2"}` |
 | Chat RX (direct) | `{"src_type":"lora","type":"msg","src":"NOCALL-1","dst":"NOCALL-2","msg":"Hello{034","msg_id":"5DFC7187","rssi":-95,"snr":12,"firmware":35,"fw_sub":"p"}` |
 | Chat RX (relayed) | `{"src_type":"lora","type":"msg","src":"OE1XAR-62,DL0VBK-12,DB0KH-11","dst":"*","msg":"...","rssi":-109,"snr":5}` |
 | Position RX | `{"src_type":"lora","type":"pos","src":"DB0MGN-1,...","lat":50.57,"lat_dir":"N","long":10.42,"long_dir":"E","alt":1243,"batt":100,"hw_id":42,"firmware":35,"fw_sub":"p","rssi":-108,"snr":5}` |
@@ -533,3 +534,34 @@ See [LICENSE](LICENSE)
 ---
 
 © by Ralf Altenbrand (DH1FR) 2025–2026
+
+---
+
+## 📋 Changelog
+
+### v1.4.0
+- **fix:** UDP registration packet no longer sends `dst` or `msg` fields – prevents broadcasting "info" text over the mesh and gateway on startup
+- **feat:** Author e-mail address `dh1fr@darc.de` added to About page
+
+### v1.3.0
+- Telemetry sender with HTTP POST endpoint (`POST /api/telemetry`)
+- Live telemetry preview and instant-send button in Settings
+- Home Assistant integration guide
+- Auto-split of long telemetry messages (`TM1:` / `TM2:`)
+- Configurable telemetry schedule hours
+
+### v1.2.0
+- Periodic beacon (Bake) with status indicator
+- State persistence (chat tabs, MH list, monitor, own GPS)
+- Browser GPS button for own position
+- Audio notification for incoming direct messages
+- Full relay path display in monitor
+
+### v1.1.0
+- ACK delivery tracking (`⏳` / `✓` / `✓✓`)
+- MH list with GPS distance, battery level and hardware badge
+- Web-based Settings editor
+- Multi-language UI (de / en / it / es)
+
+### v1.0.0
+- Initial release
