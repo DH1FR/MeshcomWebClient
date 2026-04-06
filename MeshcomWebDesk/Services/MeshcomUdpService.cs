@@ -215,7 +215,7 @@ public partial class MeshcomUdpService : BackgroundService
 
         try
         {
-            var json = JsonSerializer.Serialize(new { type = "info", src = _settings.MyCallsign, dst = "*", msg = "info" });
+            var json = JsonSerializer.Serialize(new { type = "info", src = _settings.MyCallsign });
             var bytes = Encoding.UTF8.GetBytes(json);
             var remoteEp = new IPEndPoint(IPAddress.Parse(_settings.DeviceIp), _settings.DevicePort);
 
