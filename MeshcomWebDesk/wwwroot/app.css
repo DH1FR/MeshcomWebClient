@@ -659,6 +659,10 @@ h1:focus {
     font-size: 1.05rem;
     font-weight: 600;
     color: #e0e0e0;
+    margin: 0 0 0.5rem;
+}
+
+.about-email {
     margin: 0 0 1rem;
 }
 
