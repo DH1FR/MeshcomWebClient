@@ -29,7 +29,7 @@
                     <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
-            Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")
+            <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
         </div>
 
         @if (_showNewTabInput)
@@ -82,7 +82,7 @@
             else
             {
                 <div class="no-tab-selected">
-                    Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.", "per aprire una nuova chat, o attendi un messaggio in arrivo.", "para abrir un nuevo chat, o espera un mensaje entrante.")
+                    <p>@Loc.T("Kein Tab ausgewählt. Klicke", "No tab selected. Click", "Nessuna scheda selezionata. Fai clic su", "Ninguna pestaña seleccionada. Haz clic en") <strong>+</strong> @Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.", "per aprire una nuova chat, o attendi un messaggio in arrivo.", "para abrir un nuevo chat, o espera un mensaje entrante.")</p>
                 </div>
             }
         </div>

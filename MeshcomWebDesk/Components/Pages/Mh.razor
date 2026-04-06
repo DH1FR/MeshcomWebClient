@@ -50,7 +50,7 @@ Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes"
     @if (_stations.Count == 0)
     {
         <div class="mh-empty">
-            Loc.T("Noch keine Stationen gehört.", "No stations heard yet.", "Nessuna stazione ricevuta.", "Ninguna estación escuchada aún.")
+            <p>@Loc.T("Noch keine Stationen gehört.", "No stations heard yet.", "Nessuna stazione ricevuta.", "Ninguna estación escuchada aún.")</p>
             <p class="mh-empty-hint">@Loc.T("Empfangene LoRa-Nachrichten erscheinen hier automatisch.", "Received LoRa messages will appear here automatically.", "I messaggi LoRa ricevuti appariranno qui automaticamente.", "Los mensajes LoRa recibidos aparecerán aquí automáticamente.")</p>
         </div>
     }
@@ -61,11 +61,11 @@ Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes"
                 <thead>
                     <tr>
                         <th>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</th>
-                        Loc.T("Zuletzt gehört", "Last Heard", "Ultima ricezione", "último recibido")
+                        <th>@Loc.T("Zuletzt gehört", "Last Heard", "Ultima ricezione", "último recibido")</th>
                         <th class="col-center">@Loc.T("Anz.", "Cnt.", "N.", "N.")</th>
                         <th>@Loc.T("Letzte Nachricht", "Last Message", "Ultimo messaggio", "último mensaje")</th>
                         <th>@Loc.T("GPS-Position", "GPS Position", "Posizione GPS", "Posición GPS")</th>
-                        Loc.T("Höhe", "Alt.", "Alt.", "Alt.")
+                        <th class="col-center">@Loc.T("Höhe", "Alt.", "Alt.", "Alt.")</th>
                         <th class="col-center">@Loc.T("Entfernung", "Distance", "Distanza", "Distancia")</th>
                         <th class="col-center">🔋</th>
                         <th class="col-center">RSSI</th>
