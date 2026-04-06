@@ -19,7 +19,7 @@ and makes a full web client for MeshCom available via a simple URL
 
 ## Screenshots
 
-![MeshCom Web Client](docs/screenshot.png)
+![MeshCom Web Client](docs/screenshot.png?v=2)
 
 ---
 
