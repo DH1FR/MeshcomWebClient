@@ -224,7 +224,8 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │     certs/                   ← LAN certificate directory (not in repo – .gitignore)
 │
 ├─ scripts/
-│     create-lan-cert.ps1      ← PowerShell: generates self-signed cert for HTTPS LAN access
+│     create-lan-cert.ps1      ← PowerShell: generates self-signed cert for HTTPS LAN access (Windows)
+│     create-lan-cert.sh       ← Bash: generates self-signed cert for HTTPS LAN access (Linux / Docker)
 │
 └─ Services/
       MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
@@ -450,11 +451,56 @@ Das Skript erstellt:
 - `certs/meshcom-lan.crt` – für Mobilgeräte (dort installieren)
 - Trägt das Zertifikat in Windows `CurrentUser\Root` ein → **kein Browser-Warning mehr** auf dem PC
 
+#### 1b. Zertifikat erstellen (Linux / Docker-Server)
+
+Voraussetzung: `openssl` installiert (`sudo apt-get install -y openssl`).
+
+```bash
+# Skript ausführbar machen (einmalig)
+chmod +x scripts/create-lan-cert.sh
+
+# IP automatisch erkennen:
+./scripts/create-lan-cert.sh
+
+# oder IP manuell angeben:
+./scripts/create-lan-cert.sh 192.168.1.100
+```
+
+Das Skript erstellt:
+- `MeshcomWebDesk/certs/meshcom-lan.pfx` – für Kestrel im Container
+- `MeshcomWebDesk/certs/meshcom-lan.crt` – für Mobilgeräte
+
 #### 2. App mit HTTPS starten
+
+**Windows (dotnet run):**
 
 ```powershell
 cd MeshcomWebDesk
 dotnet run --launch-profile lan-https
+```
+
+**Linux / Docker Compose:**
+
+In `docker-compose.yml` folgende Änderungen vornehmen:
+
+```yaml
+services:
+  meshcom:
+    # ...bestehende Konfiguration...
+    environment:
+      - ASPNETCORE_ENVIRONMENT=LanHttps   # lädt appsettings.LanHttps.json
+      - TZ=Europe/Berlin
+    volumes:
+      - ./data:/app/data
+      - ./MeshcomWebDesk/certs:/app/certs:ro   # Zertifikat read-only einbinden
+```
+
+> **Ports:** Bei `network_mode: host` sind keine expliziten Port-Mappings nötig.
+> HTTP `:5162` und HTTPS `:5163` laufen gleichzeitig.
+
+```bash
+# Container neu starten
+docker compose up -d --build
 ```
 
 Beide Ports laufen gleichzeitig:
@@ -795,6 +841,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.5
+- **feat:** 🔒 **`scripts/create-lan-cert.sh`** – Linux/Docker equivalent of the Windows PowerShell cert script; uses `openssl`, auto-detects LAN IP, exports PFX + CRT
+- **docs:** 🔒 **HTTPS Docker** – vollständige Anleitung für Zertifikatserstellung auf Linux und Einbindung via Docker Compose volume mount
+- **docs:** Architecture updated with `create-lan-cert.sh`
 
 ### v1.6.4
 - **fix:** 🗺️ **Map – 50km Button** – "An unhandled error has occurred" behoben; `L.circle.getBounds()` ersetzt durch manuelle Haversine-Bounding-Box (funktioniert ohne map context)
