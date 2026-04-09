@@ -674,6 +674,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.6.2
+- **feat:** 🗺️ **Map – Zoom-Buttons** – neue Button-Leiste über der Karte: `📡 Alle` (alle Stationen), `🌍 Europa`, `📍 50 km` (Radius um eigene Position)
+- **fix:** 🗺️ **Map – Auto-Zoom** entfernt – Karte zoomt nur noch einmalig beim ersten Laden mit Daten; danach bleibt der Ausschnitt beim Eingang neuer Positionen stabil
+- **fix:** 🗺️ **Map – Rufzeichen-Kontrast** verbessert – dunkles halbtransparentes Pill-Label statt Text-Shadow, jetzt auf hellen und dunklen Kartenbereichen lesbar
+
 ### v1.6.1
 - **fix:** 🗺️ **Map – "Noch keine GPS-Position"** wurde angezeigt obwohl bereits Stationen auf der Karte eingetragen waren – `StateHasChanged()` wird jetzt nach `UpdateMarkersAsync()` aufgerufen
 - **fix:** 🗺️ **Map – Station-Strip** ersetzt durch kompakte einzeilige Info-Leiste (`📡 N Station(en) · 📍 Rufzeichen`) – bei vielen Stationen keine unleserliche Liste mehr

@@ -5,6 +5,8 @@ window.meshcomMap = (function () {
     var _map          = null;
     var _stationLayer = null;
     var _ownLayer     = null;
+    var _lastBounds   = null;   // saved after every updateMarkers for fitAll()
+    var _initialFitDone = false; // fit once on first load, then user controls zoom
 
     function esc(s) {
         return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -35,6 +37,8 @@ window.meshcomMap = (function () {
     return {
         init: function (elementId, centerLat, centerLon, zoom) {
             if (_map) { _map.remove(); _map = null; }
+            _lastBounds     = null;
+            _initialFitDone = false;
             _map = L.map(elementId).setView([centerLat, centerLon], zoom);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
@@ -71,13 +75,44 @@ window.meshcomMap = (function () {
                 bounds.push([ownLat, ownLon]);
             }
 
-            if (bounds.length > 1) {
-                _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
-            } else if (bounds.length === 1 && _map.getZoom() < 10) {
-                _map.setView(bounds[0], 11);
+            // Save bounds for manual fitAll button
+            if (bounds.length > 0) _lastBounds = bounds.slice();
+
+            // Auto-fit only once on the very first load with data
+            if (!_initialFitDone && bounds.length > 0) {
+                _initialFitDone = true;
+                if (bounds.length === 1) {
+                    _map.setView(bounds[0], 11);
+                } else {
+                    _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+                }
             }
+        },
+
+        // Zoom to all visible stations + own position
+        fitAll: function () {
+            if (!_map || !_lastBounds || _lastBounds.length === 0) return;
+            if (_lastBounds.length === 1) {
+                _map.setView(_lastBounds[0], 11);
+            } else {
+                _map.fitBounds(_lastBounds, { padding: [40, 40], maxZoom: 12 });
+            }
+        },
+
+        // Zoom to Europe overview
+        fitEurope: function () {
+            if (!_map) return;
+            _map.fitBounds([[34, -12], [72, 45]]);
+        },
+
+        // Zoom to a circle of `km` radius around own position
+        fitOwn: function (lat, lon, km) {
+            if (!_map) return;
+            var circle = L.circle([lat, lon], { radius: (km || 50) * 1000 });
+            _map.fitBounds(circle.getBounds());
         },
 
         invalidateSize: function () { if (_map) _map.invalidateSize(); }
     };
 })();
+

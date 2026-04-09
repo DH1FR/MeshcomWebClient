@@ -13,6 +13,19 @@
 <PageTitle>🗺️ @Loc.T("Karte", "Map", "Mappa", "Mapa") – MeshCom WebDesk</PageTitle>
 
 <div class="map-page">
+    <div class="map-controls-bar">
+        <button class="map-ctrl-btn" @onclick='() => JS.InvokeVoidAsync("meshcomMap.fitAll")'>
+            📡 @Loc.T("Alle", "All", "Tutti", "Todos")
+        </button>
+        <button class="map-ctrl-btn" @onclick='() => JS.InvokeVoidAsync("meshcomMap.fitEurope")'>
+            🌍 @Loc.T("Europa", "Europe", "Europa", "Europa")
+        </button>
+        <button class="map-ctrl-btn" @onclick="FitOwnAsync"
+                disabled="@(!UdpService.Status.OwnLatitude.HasValue)"
+                title="@Loc.T("50 km Radius um eigene Position", "50 km radius around own position", "50 km raggio intorno alla propria posizione", "Radio de 50 km alrededor de la propia posición")">
+            📍 50 km
+        </button>
+    </div>
     <div id="meshcom-map" class="map-container"></div>
 
     @if (!_hasPositions)
@@ -117,6 +130,14 @@
 
     private static string RssiCss(int rssi) =>
         rssi > -90 ? "rssi-good" : rssi > -105 ? "rssi-ok" : "rssi-weak";
+
+    private async Task FitOwnAsync()
+    {
+        var status = UdpService.Status;
+        if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
+            await JS.InvokeVoidAsync("meshcomMap.fitOwn",
+                status.OwnLatitude.Value, status.OwnLongitude.Value, 50);
+    }
 
     public void Dispose()
     {
