@@ -1,4 +1,4 @@
-# MeshCom WebDesk
+﻿# MeshCom WebDesk
 
 A **Blazor Server** web application for communicating with a [MeshCom 4.0](https://icssw.org/meshcom/) node via UDP (EXTUDP JSON protocol).  
 Built with **.NET 10** and **Blazor Interactive Server**.
@@ -516,6 +516,41 @@ Die Datei `certs/meshcom-lan.crt` auf das Gerät übertragen (z. B. per E-Mail 
 |---|---|
 | **iPad / iPhone** (iOS) | Einstellungen → Allgemein → VPN & Geräteverwaltung → Profil installieren → danach: Einstellungen → Allgemein → Info → Zertifikatsvertrauenseinstellungen → Zertifikat aktivieren |
 | **Android** | Einstellungen → Sicherheit → Verschlüsselung & Anmeldedaten → Zertifikat installieren → CA-Zertifikat |
+
+#### 4. Zertifikat auf Windows-PC installieren
+
+Noetig wenn der Container auf einem Linux-Server laeuft und du von Windows darauf zugreifst.
+
+**Vorbereitung:** `meshcom-lan.crt` vom Linux-Server kopieren (SCP / WinSCP / USB-Stick):
+
+```powershell
+scp user@192.168.1.x:/opt/meshcom/certs/meshcom-lan.crt C:\Temp\meshcom-lan.crt
+```
+
+**Variante A - Doppelklick (empfohlen):**
+
+1. `meshcom-lan.crt` per Doppelklick oeffnen
+2. Klick auf **Zertifikat installieren**
+3. Speicherort: **Lokaler Computer** -> Weiter (Adminrechte erforderlich)
+4. **Alle Zertifikate in folgendem Speicher speichern** -> Durchsuchen
+5. **Vertrauenswuerdige Stammzertifizierungsstellen** -> OK -> Weiter -> **Fertig stellen**
+6. Sicherheitswarnung: **Ja**
+
+**Variante B - PowerShell als Administrator:**
+
+```powershell
+$cert  = New-Object Security.Cryptography.X509Certificates.X509Certificate2("C:\Temp\meshcom-lan.crt")
+$store = New-Object Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
+$store.Open("ReadWrite"); $store.Add($cert); $store.Close()
+Write-Host "Installiert: $($cert.Thumbprint)"
+```
+
+Danach **Browser neu starten** (Strg+Shift+Del empfohlen).
+
+> **Firefox** nutzt einen eigenen Zertifikatspeicher.
+> Empfehlung: `about:config` -> `security.enterprise_roots.enabled` auf `true` setzen -> neu starten.
+
+Ergebnis: `https://192.168.x.x:5163` zeigt das Schloss-Symbol ohne Warnung.
 
 ---
 
