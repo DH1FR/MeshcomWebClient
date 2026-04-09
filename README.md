@@ -168,6 +168,17 @@ and makes a full web client for MeshCom available via a simple URL
 - **Apple meta tags** for iOS Safari Add-to-Home-Screen
 - Custom **antenna SVG icon** in the app colour scheme
 
+### 🔒 HTTPS for LAN (required for PWA on mobile)
+- **`scripts/create-lan-cert.ps1`** – one-click self-signed certificate generator for Windows PowerShell
+  - Auto-detects LAN IP; can also be set manually with `-LanIp`
+  - Creates cert with **IP SAN** (Subject Alternative Name) so browsers accept it without warnings
+  - Exports `certs/meshcom-lan.pfx` for Kestrel + `certs/meshcom-lan.crt` for mobile device trust
+  - Trusts the cert in **Windows `CurrentUser\Root`** automatically
+- New launch profile **`lan-https`** – binds HTTP `:5162` and HTTPS `:5163` simultaneously
+- `appsettings.LanHttps.json` – Kestrel HTTPS endpoint configuration (loaded via `ASPNETCORE_ENVIRONMENT=LanHttps`)
+- HTTP on port 5162 **stays active** – existing bookmarks and Docker deployments are unaffected
+- HTTPS is only needed for PWA installation on Android / iPad / iPhone over LAN
+
 ---
 
 ## Architecture
@@ -176,6 +187,7 @@ and makes a full web client for MeshCom available via a simple URL
 MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │  Program.cs                  ← DI setup, Serilog, hosted services
 │  appsettings.json            ← All configuration
+│  appsettings.LanHttps.json   ← Kestrel HTTPS endpoint on :5163 (for PWA on mobile)
 │
 ├─ Components/
 │  ├─ App.razor                ← HTML shell + JS helpers + Leaflet CDN + SW registration
@@ -209,6 +221,10 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │     manifest.webmanifest     ← PWA manifest (name, icon, display:standalone, shortcuts)
 │     service-worker.js        ← Minimal SW – enables install prompt
 │     icons/icon.svg           ← Antenna icon in app colour scheme
+│     certs/                   ← LAN certificate directory (not in repo – .gitignore)
+│
+├─ scripts/
+│     create-lan-cert.ps1      ← PowerShell: generates self-signed cert for HTTPS LAN access
 │
 └─ Services/
       MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
@@ -382,12 +398,30 @@ This happens because the binary is not code-signed.
 
 ```powershell
 cd MeshcomWebDesk
-dotnet run --launch-profile lan    # accessible from all devices in the LAN
+dotnet run --launch-profile lan         # HTTP only, accessible from all LAN devices
 # or
-dotnet run                         # localhost only
+dotnet run --launch-profile lan-https   # HTTP :5162 + HTTPS :5163 (required for PWA on mobile)
+# or
+dotnet run                              # localhost only
 ```
 
 Then open `http://localhost:5162` (or `http://<your-ip>:5162` for LAN access).
+
+### HTTPS for LAN (PWA on mobile)
+
+```powershell
+# Step 1 – Generate self-signed certificate (once, run as admin)
+cd C:\SRC\RA\MeshcomWebDesk
+.\scripts\create-lan-cert.ps1          # auto-detects LAN IP
+# or: .\scripts\create-lan-cert.ps1 -LanIp 192.168.1.100
+
+# Step 2 – Start app with HTTPS
+cd MeshcomWebDesk
+dotnet run --launch-profile lan-https
+```
+
+> **Mobile trust:** Copy `certs/meshcom-lan.crt` to your phone and install it as a trusted root CA.
+> Then open `https://<your-ip>:5163` in the browser and install the PWA.
 
 ---
 
@@ -673,6 +707,10 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.3
+- **feat:** 🔒 **HTTPS for LAN** – `scripts/create-lan-cert.ps1` generates a self-signed cert with IP SAN; new `lan-https` launch profile binds HTTP :5162 + HTTPS :5163 simultaneously; required for PWA installation on Android / iPad / iPhone
+- **feat:** `appsettings.LanHttps.json` – dedicated Kestrel HTTPS endpoint config; HTTP stays unaffected
 
 ### v1.6.2
 - **feat:** 🗺️ **Map – Zoom-Buttons** – neue Button-Leiste über der Karte: `📡 Alle` (alle Stationen), `🌍 Europa`, `📍 50 km` (Radius um eigene Position)
