@@ -128,6 +128,21 @@ and makes a full web client for MeshCom available via a simple URL
 - Rolling daily log files with configurable retention
 - Optional UDP traffic log (`LogUdpTraffic`) for offline analysis
 
+### 🗄️ Database integration (Beta)
+- Optional persistent storage of all monitor data to an external database
+- **MySQL / MariaDB**: writes each monitor entry as a row via parametrised `INSERT` (uses `MySqlConnector`)
+- **InfluxDB 2**: writes each monitor entry as a point via HTTP Line Protocol (`/api/v2/write`)
+- Provider selection in **Settings → 🗄️ Datenbank (Beta)**: `none` / `mysql` / `influxdb2`
+- **"Test connection"** button: detects missing database, table or bucket and offers **automatic creation** with a single click
+- **Optional insert logging** – every successful write is logged at `Information` level; privacy notice shown in Settings
+- Provider and connection settings change **live without restart**
+
+### 💬 Message length validation
+- MeshCom LoRa packets are limited to **149 characters** of message text
+- **Character counter** `X/149` next to the input field: grey → yellow (≥ 130) → red bold (≥ 145)
+- `maxlength="149"` prevents over-long input in the browser
+- **Server-side guard** in `SendMessageAsync`: logs a warning and aborts send if text exceeds 149 characters
+
 ---
 
 ## Architecture
@@ -167,6 +182,12 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
       LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
+      Database/
+        IMonitorDataSink.cs    ← Interface: WriteAsync(MeshcomMessage)
+        MySqlMonitorSink.cs    ← MySQL / MariaDB write sink (MySqlConnector)
+        InfluxDbMonitorSink.cs ← InfluxDB 2 write sink (HTTP Line Protocol)
+        MonitorSinkService.cs  ← Routes each write to the active provider; IOptionsMonitor-aware
+        DatabaseSetupService.cs← Connection test + automatic schema creation (DB, table, bucket)
 ```
 
 ---
@@ -202,6 +223,16 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
   "Language":              "de",         // UI language: "de" (German) or "en" (English)
+  "Database": {                          // optional database sink (Beta)
+    "Provider":              "none",     // "none" | "mysql" | "influxdb2"
+    "MySqlConnectionString": "",         // e.g. "Server=localhost;Database=meshcom;User=mc;Password=secret;"
+    "MySqlTableName":        "meshcom_monitor", // created automatically via Settings → Anlegen
+    "InfluxUrl":             "http://localhost:8086",
+    "InfluxToken":           "",
+    "InfluxOrg":             "meshcom",
+    "InfluxBucket":          "meshcom",
+    "LogInserts":            false       // log every successful write at Information level
+  },
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
     { "JsonKey": "luftdruck",   "Label": "🧭",  "Unit": "hPa", "Decimals": 1 },
@@ -548,6 +579,12 @@ See [LICENSE](LICENSE)
 ---
 
 ## 📋 Changelog
+
+### v1.5.0
+- **feat:** 🗄️ **Database integration (Beta)** – optional MySQL/MariaDB or InfluxDB 2 sink writes every monitor entry to an external database
+- **feat:** **Settings → Datenbank (Beta)** – provider dropdown, connection fields, "Test connection" button with automatic DB/table/bucket creation
+- **feat:** **Optional insert logging** (`LogInserts`) – logs the full SQL `INSERT` at Information level; privacy notice shown in Settings UI
+- **feat:** **Message length guard** – character counter `X/149` in the chat input, `maxlength="149"` enforced in the browser and server-side warning log when limit is exceeded
 
 ### v1.4.3
 - **feat:** `TimeOffsetHours` setting – configurable UTC offset for timestamp display (supports half-hour offsets, e.g. `5.5` for IST)

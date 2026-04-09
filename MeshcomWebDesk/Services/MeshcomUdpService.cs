@@ -555,6 +555,14 @@ public partial class MeshcomUdpService : BackgroundService
             return;
         }
 
+        if (text.Length > 149)
+        {
+            _logger.LogWarning(
+                "Nachricht zu lang ({Length} Zeichen, max 149) – Senden abgebrochen: \"{Excerpt}\"",
+                text.Length, text[..Math.Min(60, text.Length)]);
+            return;
+        }
+
         try
         {
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
+using MeshcomWebDesk.Services.Database;
 
 namespace MeshcomWebDesk.Services;
 
@@ -16,6 +17,7 @@ public class ChatService
     private readonly object _lock = new();
     private MeshcomSettings _settings;
     private readonly ILogger<ChatService> _logger;
+    private readonly IMonitorDataSink _sink;
 
     /// <summary>
     /// Rolling deduplication cache.
@@ -42,10 +44,11 @@ public class ChatService
     /// </summary>
     public event Action<string>? OnNewTab;
 
-    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger)
+    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink)
     {
         _settings = settings.CurrentValue;
         _logger   = logger;
+        _sink     = sink;
         settings.OnChange(s => _settings = s);
     }
 
@@ -424,6 +427,7 @@ public class ChatService
         _allMessages.Add(message);
         if (_allMessages.Count > _settings.MonitorMaxMessages)
             _allMessages.RemoveRange(0, _allMessages.Count - _settings.MonitorMaxMessages);
+        _ = _sink.WriteAsync(message);
     }
 
     private ChatTab GetOrCreateTab(string key, bool triggerAutoReply = false)

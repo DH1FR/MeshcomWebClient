@@ -301,6 +301,19 @@ h1:focus {
     cursor: not-allowed;
 }
 
+.char-counter {
+    align-self: center;
+    font-size: 11px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    white-space: nowrap;
+    min-width: 3.5rem;
+    text-align: right;
+    color: #6c757d;
+    user-select: none;
+}
+.char-warn   { color: #e3b341; }
+.char-danger { color: #f85149; font-weight: 700; }
+
 /* ===== Lower Pane – Monitor ===== */
 .lower-pane {
     flex: 1;

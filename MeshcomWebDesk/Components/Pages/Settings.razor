@@ -1,10 +1,12 @@
 @page "/settings"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
+@using MeshcomWebDesk.Services.Database
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject SettingsService SettingsService
 @inject MeshcomUdpService UdpService
 @inject LanguageService Loc
+@inject DatabaseSetupService DatabaseSetupService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -304,6 +306,141 @@
             </div>
         </div>
 
+        <!-- Datenbank / Database (Beta) -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">🗄️ @Loc.T("Datenbank (Beta)", "Database (Beta)", "Database (Beta)", "Base de datos (Beta)")</h2>
+            <div class="settings-grid">
+                <label>@Loc.T("Anbieter", "Provider", "Provider", "Proveedor")</label>
+                <select @bind="_model.DbProvider" @bind:after="ResetDbTestState">
+                    <option value="@DatabaseSettings.ProviderNone">@Loc.T("Deaktiviert", "Disabled", "Disabilitato", "Desactivado")</option>
+                    <option value="@DatabaseSettings.ProviderMySql">MySQL / MariaDB</option>
+                    <option value="@DatabaseSettings.ProviderInfluxDb">InfluxDB 2</option>
+                </select>
+
+                @if (_model.DbProvider == DatabaseSettings.ProviderMySql)
+                {
+                    <label>
+                        @Loc.T("Verbindungsstring", "Connection String", "Stringa di connessione", "Cadena de conexión")<br />
+                        <small>z.B. Server=localhost;Database=meshcom;User=mc;Password=secret;</small>
+                    </label>
+                    <input type="password" autocomplete="new-password" @bind="_model.DbMySqlConnectionString"
+                           placeholder="Server=localhost;Database=meshcom;User=mc;Password=..." />
+
+                    <label>@Loc.T("Tabellenname", "Table Name", "Nome tabella", "Nombre de tabla")</label>
+                    <input type="text" @bind="_model.DbMySqlTableName" placeholder="meshcom_monitor" />
+                }
+
+                @if (_model.DbProvider == DatabaseSettings.ProviderInfluxDb)
+                {
+                    <label>URL</label>
+                    <input type="text" @bind="_model.DbInfluxUrl" placeholder="http://localhost:8086" />
+
+                    <label>Token</label>
+                    <input type="password" autocomplete="new-password" @bind="_model.DbInfluxToken" />
+
+                    <label>@Loc.T("Organisation", "Organisation", "Organizzazione", "Organización")</label>
+                    <input type="text" @bind="_model.DbInfluxOrg" placeholder="meshcom" />
+
+                    <label>Bucket</label>
+                    <input type="text" @bind="_model.DbInfluxBucket" placeholder="meshcom" />
+                }
+
+                @if (_model.DbProvider != DatabaseSettings.ProviderNone)
+                {
+                    <label>
+                        @Loc.T("DB-Inserts loggen", "Log DB Inserts", "Log insert DB", "Registrar inserts DB")<br />
+                        <small style="color:#e3b341">
+                            ⚠️ @Loc.T(
+                                "Rufzeichen und Nachrichtentexte werden in die Log-Datei geschrieben. Datenschutz beachten.",
+                                "Callsigns and message texts are written to the log file. Consider privacy implications.",
+                                "Nominativi e testi vengono scritti nel log. Considerare la privacy.",
+                                "Los indicativos y textos se escriben en el log. Considerar la privacidad.")
+                        </small>
+                    </label>
+                    <label class="settings-toggle">
+                        <input type="checkbox" @bind="_model.DbLogInserts" />
+                        <span>@(_model.DbLogInserts ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    </label>
+                }
+            </div>
+
+            @if (_model.DbProvider != DatabaseSettings.ProviderNone)
+            {
+                <div style="margin-top:1rem">
+                    <button type="button" class="btn-send-now" @onclick="TestDbConnectionAsync" disabled="@_dbTesting">
+                        @if (_dbTesting)
+                        {
+                            <span>⏳ @Loc.T("Teste…", "Testing…", "Test in corso…", "Probando…")</span>
+                        }
+                        else
+                        {
+                            <span>🔌 @Loc.T("Verbindung testen", "Test Connection", "Testa connessione", "Probar conexión")</span>
+                        }
+                    </button>
+                </div>
+
+                @if (_dbTestResult != null)
+                {
+                    @if (!_dbTestResult.IsConnected)
+                    {
+                        <div class="settings-error" style="margin-top:0.5rem">
+                            ❌ @Loc.T("Verbindung fehlgeschlagen:", "Connection failed:", "Connessione fallita:", "Conexión fallida:") @_dbTestResult.ErrorMessage
+                        </div>
+                    }
+                    else if (_dbTestResult.DatabaseExists && _dbTestResult.TableOrBucketExists)
+                    {
+                        <div class="settings-success" style="margin-top:0.5rem">
+                            ✅ @Loc.T("Verbindung OK – Datenbank und Tabelle vorhanden.", "Connection OK – database and table exist.", "Connessione OK – database e tabella esistono.", "Conexión OK – base de datos y tabla existen.")
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="margin-top:0.5rem;padding:0.75rem;background:#2d1f0a;border:1px solid #e3b341;border-radius:6px">
+                            <div style="color:#e3b341">
+                                ⚠️
+                                @if (!_dbTestResult.DatabaseExists)
+                                {
+                                    <span>@Loc.T("Datenbank nicht gefunden.", "Database not found.", "Database non trovato.", "Base de datos no encontrada.")</span>
+                                }
+                                @if (!_dbTestResult.TableOrBucketExists)
+                                {
+                                    @if (_model.DbProvider == DatabaseSettings.ProviderMySql)
+                                    {
+                                        <span>@Loc.T("Tabelle nicht gefunden.", "Table not found.", "Tabella non trovata.", "Tabla no encontrada.")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@Loc.T("Bucket nicht gefunden.", "Bucket not found.", "Bucket non trovato.", "Bucket no encontrado.")</span>
+                                    }
+                                }
+                                <br />
+                                @Loc.T("Soll automatisch angelegt werden?", "Should it be created automatically?", "Deve essere creato automaticamente?", "¿Debe crearse automáticamente?")
+                            </div>
+                            <div style="margin-top:0.5rem;display:flex;gap:8px">
+                                <button type="button" class="btn-save" @onclick="SetupDbAsync" disabled="@_dbSettingUp">
+                                    @if (_dbSettingUp)
+                                    {
+                                        <span>⏳ @Loc.T("Wird angelegt…", "Creating…", "Creazione in corso…", "Creando…")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>✅ @Loc.T("Ja, anlegen", "Yes, create", "Sì, crea", "Sí, crear")</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn-remove" @onclick="ResetDbTestState">
+                                    @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                                </button>
+                            </div>
+                            @if (_dbSetupError != null)
+                            {
+                                <div class="settings-error" style="margin-top:0.5rem">❌ @_dbSetupError</div>
+                            }
+                        </div>
+                    }
+                }
+            }
+        </div>
+
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
             <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
@@ -337,6 +474,11 @@
     private string  _autoReplyTestCallsign = string.Empty;
     private bool    _autoReplySending;
     private string? _autoReplyResult;
+
+    private DbTestResult? _dbTestResult;
+    private bool          _dbTesting;
+    private bool          _dbSettingUp;
+    private string?       _dbSetupError;
 
     private async Task SendTelemetryNowAsync()
     {
@@ -479,6 +621,46 @@
         }
     }
 
+    private void ResetDbTestState()
+    {
+        _dbTestResult = null;
+        _dbSetupError = null;
+    }
+
+    private async Task TestDbConnectionAsync()
+    {
+        _dbTestResult = null;
+        _dbSetupError = null;
+        _dbTesting    = true;
+        try
+        {
+            _dbTestResult = await DatabaseSetupService.TestAsync(_model.ToDbSettings());
+        }
+        finally
+        {
+            _dbTesting = false;
+        }
+    }
+
+    private async Task SetupDbAsync()
+    {
+        if (_dbTestResult is null) return;
+        _dbSetupError = null;
+        _dbSettingUp  = true;
+        try
+        {
+            var error = await DatabaseSetupService.SetupAsync(_model.ToDbSettings(), _dbTestResult);
+            if (error is null)
+                _dbTestResult = await DatabaseSetupService.TestAsync(_model.ToDbSettings());
+            else
+                _dbSetupError = error;
+        }
+        finally
+        {
+            _dbSettingUp = false;
+        }
+    }
+
     protected override void OnInitialized()
     {
         Loc.OnChange += StateHasChanged;
@@ -519,7 +701,15 @@
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
             TelemetryApiKey        = s.TelemetryApiKey,
-            Language               = s.Language
+            Language               = s.Language,
+            DbProvider              = s.Database.Provider,
+            DbMySqlConnectionString = s.Database.MySqlConnectionString,
+            DbMySqlTableName        = s.Database.MySqlTableName,
+            DbInfluxUrl             = s.Database.InfluxUrl,
+            DbInfluxToken           = s.Database.InfluxToken,
+            DbInfluxOrg             = s.Database.InfluxOrg,
+            DbInfluxBucket          = s.Database.InfluxBucket,
+            DbLogInserts            = s.Database.LogInserts
         };
     }
 
@@ -570,6 +760,28 @@
         public string TelemetryApiKey        { get; set; } = string.Empty;
         public string Language               { get; set; } = "de";
 
+        // Database
+        public string DbProvider              { get; set; } = DatabaseSettings.ProviderNone;
+        public string DbMySqlConnectionString { get; set; } = string.Empty;
+        public string DbMySqlTableName        { get; set; } = "meshcom_monitor";
+        public string DbInfluxUrl             { get; set; } = "http://localhost:8086";
+        public string DbInfluxToken           { get; set; } = string.Empty;
+        public string DbInfluxOrg             { get; set; } = "meshcom";
+        public string DbInfluxBucket          { get; set; } = "meshcom";
+        public bool   DbLogInserts            { get; set; }
+
+        public DatabaseSettings ToDbSettings() => new()
+        {
+            Provider              = DbProvider,
+            MySqlConnectionString = DbMySqlConnectionString,
+            MySqlTableName        = DbMySqlTableName,
+            InfluxUrl             = DbInfluxUrl,
+            InfluxToken           = DbInfluxToken,
+            InfluxOrg             = DbInfluxOrg,
+            InfluxBucket          = DbInfluxBucket,
+            LogInserts            = DbLogInserts
+        };
+
         public MeshcomSettings ToSettings() => new()
         {
             ListenIp            = ListenIp,
@@ -600,7 +812,8 @@
             TelemetryMapping       = TelemetryMapping,
             TelemetryApiEnabled    = TelemetryApiEnabled,
             TelemetryApiKey        = TelemetryApiKey,
-            Language               = Language
+            Language               = Language,
+            Database               = ToDbSettings()
         };
     }
 }

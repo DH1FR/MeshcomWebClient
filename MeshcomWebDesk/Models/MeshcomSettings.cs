@@ -140,4 +140,7 @@ public class MeshcomSettings
     /// UI language. Supported values: "de" (German, default) and "en" (English).
     /// </summary>
     public string Language { get; set; } = "de";
+
+    /// <summary>Optional database sink. Set Provider to "mysql" or "influxdb2" to activate.</summary>
+    public DatabaseSettings Database { get; set; } = new();
 }

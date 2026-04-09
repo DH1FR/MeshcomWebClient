@@ -63,7 +63,18 @@ public class SettingsService
                 }).ToArray()),
                 ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
                 ["TelemetryApiKey"]     = s.TelemetryApiKey,
-                ["Language"]            = s.Language
+                ["Language"]            = s.Language,
+                ["Database"]            = new JsonObject
+                {
+                    ["Provider"]              = s.Database.Provider,
+                    ["MySqlConnectionString"] = s.Database.MySqlConnectionString,
+                    ["MySqlTableName"]        = s.Database.MySqlTableName,
+                    ["InfluxUrl"]             = s.Database.InfluxUrl,
+                    ["InfluxToken"]           = s.Database.InfluxToken,
+                    ["InfluxOrg"]             = s.Database.InfluxOrg,
+                    ["InfluxBucket"]          = s.Database.InfluxBucket,
+                    ["LogInserts"]            = s.Database.LogInserts
+                }
             }
         };
 
