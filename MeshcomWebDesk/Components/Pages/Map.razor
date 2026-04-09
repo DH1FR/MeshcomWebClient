@@ -24,24 +24,17 @@
     }
 
     @{
-        var withGps = ChatService.MhList.Where(s => s.Latitude.HasValue).OrderByDescending(s => s.LastHeard).ToList();
+        var withGps = ChatService.MhList.Where(s => s.Latitude.HasValue).ToList();
+        var ownStatus = UdpService.Status;
     }
-    @if (withGps.Count > 0)
+    @if (withGps.Count > 0 || ownStatus.OwnLatitude.HasValue)
     {
-        <div class="map-station-strip">
-            @foreach (var s in withGps)
+        <div class="map-info-bar">
+            <span>📡 @withGps.Count @Loc.T("Station(en) auf der Karte", "station(s) on map", "stazione/i sulla mappa", "estación/es en el mapa")</span>
+            @if (ownStatus.OwnLatitude.HasValue)
             {
-                <span class="map-strip-item">
-                    <span class="map-strip-call">@s.Callsign</span>
-                    @if (s.LastRssi.HasValue)
-                    {
-                        <span class="map-strip-rssi @RssiCss(s.LastRssi.Value)">@s.LastRssi dBm</span>
-                    }
-                    @if (s.Battery.HasValue)
-                    {
-                        <span class="map-strip-batt">🔋@s.Battery%</span>
-                    }
-                </span>
+                <span class="map-info-sep"> · </span>
+                <span>📍 @SettingsMonitor.CurrentValue.MyCallsign</span>
             }
         </div>
     }
@@ -75,9 +68,9 @@
             await InvokeAsync(async () =>
             {
                 if (_disposed) return;
-                StateHasChanged();
                 if (_mapInitialized)
                     await UpdateMarkersAsync();
+                StateHasChanged();
             });
         }
         catch (Exception) { }
@@ -93,6 +86,7 @@
         await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map", lat, lon, zoom);
         _mapInitialized = true;
         await UpdateMarkersAsync();
+        StateHasChanged();
     }
 
     private async Task UpdateMarkersAsync()

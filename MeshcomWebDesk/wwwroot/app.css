@@ -1349,24 +1349,22 @@ h1:focus {
     z-index: 500;
 }
 
-/* Station strip at the bottom of the map */
-.map-station-strip {
+/* Station info bar at the bottom of the map */
+.map-info-bar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-    padding: 5px 10px;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
     background: #16213e;
     border-top: 1px solid #0f3460;
-    font-size: 11px;
-    max-height: 52px;
-    overflow-y: auto;
+    font-size: 12px;
+    color: #8b949e;
     flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
-.map-strip-item  { display: flex; align-items: center; gap: 4px; }
-.map-strip-call  { color: #a0c4ff; font-family: monospace; }
-.map-strip-rssi  { color: #8b949e; }
-.map-strip-batt  { color: #8b949e; }
-.rssi-good       { color: #3fb950; }
-.rssi-ok         { color: #e3b341; }
-.rssi-weak       { color: #f85149; }
+.map-info-sep { color: #3a3a5e; }
+.rssi-good    { color: #3fb950; }
+.rssi-ok      { color: #e3b341; }
+.rssi-weak    { color: #f85149; }

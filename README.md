@@ -149,7 +149,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Own position** shown as gold diamond ◆ (APRS convention)
 - **Popup** on click: callsign, last message, RSSI, battery, altitude
 - **Auto-fit bounds** – map zooms to include all visible stations automatically
-- **Station strip** at the bottom of the map: compact list of all GPS-equipped stations
+- **Compact info bar** at the bottom: `📡 N Station(en) · 📍 MyCallsign` – clean one-liner regardless of station count
 - Updates in real-time as new position beacons arrive
 - Nav link 🗺️ added to the navigation bar
 
@@ -673,6 +673,10 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.1
+- **fix:** 🗺️ **Map – "Noch keine GPS-Position"** wurde angezeigt obwohl bereits Stationen auf der Karte eingetragen waren – `StateHasChanged()` wird jetzt nach `UpdateMarkersAsync()` aufgerufen
+- **fix:** 🗺️ **Map – Station-Strip** ersetzt durch kompakte einzeilige Info-Leiste (`📡 N Station(en) · 📍 Rufzeichen`) – bei vielen Stationen keine unleserliche Liste mehr
 
 ### v1.6.0
 - **feat:** 🗺️ **Live Map** – interactive Leaflet.js + OpenStreetMap map at `/map`; APRS-style circle markers colour-coded by RSSI; own position as gold diamond; auto-fit bounds; real-time updates
