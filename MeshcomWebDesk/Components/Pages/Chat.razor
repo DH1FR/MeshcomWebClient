@@ -325,11 +325,6 @@
         _isInitialized = true;
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadQrzDataAsync();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -351,6 +346,9 @@
                 }
             }
             catch (JSException) { }
+
+            if (await LoadQrzDataAsync())
+                StateHasChanged();
         }
 
         if (_scrollMessages)
@@ -395,8 +393,7 @@
                 RefreshData();
                 StateHasChanged();
             });
-            await LoadQrzDataAsync();
-            if (!_disposed)
+            if (await LoadQrzDataAsync() && !_disposed)
                 await InvokeAsync(StateHasChanged);
         }
         catch (Exception)
@@ -536,9 +533,10 @@
         return parts.Count > 0 ? " · " + string.Join(", ", parts) : string.Empty;
     }
 
-    private async Task LoadQrzDataAsync()
+    private async Task<bool> LoadQrzDataAsync()
     {
-        if (!SettingsOptions.Value.Qrz.Enabled) return;
+        if (!SettingsOptions.Value.Qrz.Enabled) return false;
+        var added = false;
         var callsigns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var m in _allMessages)
         {
@@ -551,7 +549,9 @@
         {
             if (_qrzData.ContainsKey(cs)) continue;
             _qrzData[cs] = await QrzService.LookupAsync(cs);
+            added = true;
         }
+        return added;
     }
 
     public void Dispose()

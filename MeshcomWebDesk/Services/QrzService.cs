@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net.Http;
+using System.Text.Json;
 using System.Xml.Linq;
 using MeshcomWebDesk.Models;
 using Microsoft.Extensions.Options;
@@ -9,15 +10,22 @@ namespace MeshcomWebDesk.Services;
 /// <summary>
 /// Queries the QRZ.com XML API for callsign information (first name and location).
 /// Session keys are cached and refreshed automatically on expiry.
-/// Callsign results are cached in memory for the lifetime of the application.
+/// Callsign results are persisted to disk (qrz-cache.json in DataPath) so that
+/// each callsign is only queried once – even across application restarts.
 /// </summary>
 public class QrzService
 {
-    private const string BaseUrl = "https://xmldata.qrz.com/xml/current/";
+    private const string BaseUrl      = "https://xmldata.qrz.com/xml/current/";
+    private const string CacheFileName = "qrz-cache.json";
+
+    private static readonly JsonSerializerOptions JsonOpts =
+        new() { WriteIndented = true };
 
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly ILogger<QrzService> _logger;
     private readonly HttpClient _http;
+    private readonly string _cacheFilePath;
+    private readonly object _fileLock = new();
 
     private string? _sessionKey;
     private readonly SemaphoreSlim _loginLock = new(1, 1);
@@ -28,6 +36,11 @@ public class QrzService
         _settingsMonitor = settingsMonitor;
         _logger = logger;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+
+        var dataPath = settingsMonitor.CurrentValue.DataPath;
+        Directory.CreateDirectory(dataPath);
+        _cacheFilePath = Path.Combine(dataPath, CacheFileName);
+        LoadCacheFromDisk();
     }
 
     /// <summary>
@@ -49,14 +62,68 @@ public class QrzService
 
         var result = await FetchAsync(bare, settings);
         _cache[bare] = result;
+        SaveCacheToDisk();
         return result;
     }
 
-    /// <summary>Clears the in-memory callsign cache and the current session key.</summary>
+    /// <summary>Clears the in-memory callsign cache, the session key and the on-disk cache file.</summary>
     public void ClearCache()
     {
         _cache.Clear();
         _sessionKey = null;
+        lock (_fileLock)
+        {
+            try { File.Delete(_cacheFilePath); }
+            catch (Exception ex) { _logger.LogWarning("Failed to delete QRZ cache file: {Message}", ex.Message); }
+        }
+    }
+
+    /// <summary>
+    /// Returns cached QRZ data synchronously without making any network request.
+    /// Returns null when the callsign has not been looked up yet or has no QRZ entry.
+    /// </summary>
+    public QrzInfo? GetCached(string callsign)
+    {
+        var bare = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
+        _cache.TryGetValue(bare, out var info);
+        return info;
+    }
+
+    // ── Disk persistence ───────────────────────────────────────────────────────
+
+    private void LoadCacheFromDisk()
+    {
+        if (!File.Exists(_cacheFilePath)) return;
+        try
+        {
+            var json = File.ReadAllText(_cacheFilePath);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, QrzInfo?>>(json);
+            if (dict is null) return;
+            foreach (var (key, value) in dict)
+                _cache[key] = value;
+            _logger.LogInformation("QRZ cache restored: {Count} entries from {Path}", dict.Count, _cacheFilePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to load QRZ cache from disk: {Message}", ex.Message);
+        }
+    }
+
+    private void SaveCacheToDisk()
+    {
+        lock (_fileLock)
+        {
+            try
+            {
+                var snapshot = _cache.ToDictionary(kv => kv.Key, kv => kv.Value);
+                var json     = JsonSerializer.Serialize(snapshot, JsonOpts);
+                File.WriteAllText(_cacheFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to save QRZ cache to disk: {Message}", ex.Message);
+            }
+        }
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────

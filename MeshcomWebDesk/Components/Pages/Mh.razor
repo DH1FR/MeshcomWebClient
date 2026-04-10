@@ -187,9 +187,10 @@
         UdpService.OnStatusChange += OnStatusChanged;
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadQrzDataAsync(_stations);
+        if (firstRender && await LoadQrzDataAsync(_stations))
+            StateHasChanged();
     }
 
     private async void OnChanged()
@@ -198,13 +199,14 @@
         try
         {
             var newList = ChatService.MhList;
-            await LoadQrzDataAsync(newList);
             await InvokeAsync(() =>
             {
                 if (_disposed) return;
                 _stations = newList;
                 StateHasChanged();
             });
+            if (await LoadQrzDataAsync(newList) && !_disposed)
+                await InvokeAsync(StateHasChanged);
         }
         catch (Exception) { }
     }
@@ -224,15 +226,17 @@
         catch (Exception) { }
     }
 
-    private async Task LoadQrzDataAsync(IReadOnlyList<HeardStation> stations)
+    private async Task<bool> LoadQrzDataAsync(IReadOnlyList<HeardStation> stations)
     {
-        if (!SettingsOptions.Value.Qrz.Enabled) return;
+        if (!SettingsOptions.Value.Qrz.Enabled) return false;
+        var added = false;
         foreach (var s in stations)
         {
             if (_qrzData.ContainsKey(s.Callsign)) continue;
-            var info = await QrzService.LookupAsync(s.Callsign);
-            _qrzData[s.Callsign] = info;
+            _qrzData[s.Callsign] = await QrzService.LookupAsync(s.Callsign);
+            added = true;
         }
+        return added;
     }
 
     private double? CalcDistance(HeardStation s)

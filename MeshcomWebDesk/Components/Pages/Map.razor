@@ -104,26 +104,25 @@
     private async Task UpdateMarkersAsync()
     {
         var qrzEnabled = SettingsMonitor.CurrentValue.Qrz.Enabled;
-        var withGps    = ChatService.MhList.Where(s => s.Latitude.HasValue && s.Longitude.HasValue).ToList();
-
-        var stationList = new List<object>(withGps.Count);
-        foreach (var s in withGps)
-        {
-            var qrz     = qrzEnabled ? await QrzService.LookupAsync(s.Callsign) : null;
-            stationList.Add(new
+        var stations = ChatService.MhList
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+            .Select(s =>
             {
-                callsign = s.Callsign,
-                lat      = s.Latitude!.Value,
-                lon      = s.Longitude!.Value,
-                alt      = s.Altitude,
-                rssi     = s.LastRssi,
-                text     = s.LastMessage,
-                battery  = s.Battery,
-                qrzName  = qrz?.FirstName,
-                qrzLoc   = qrz?.Location
-            });
-        }
-        var stations = stationList.ToArray();
+                var qrz = qrzEnabled ? QrzService.GetCached(s.Callsign) : null;
+                return new
+                {
+                    callsign = s.Callsign,
+                    lat      = s.Latitude!.Value,
+                    lon      = s.Longitude!.Value,
+                    alt      = s.Altitude,
+                    rssi     = s.LastRssi,
+                    text     = s.LastMessage,
+                    battery  = s.Battery,
+                    qrzName  = qrz?.FirstName,
+                    qrzLoc   = qrz?.Location
+                };
+            })
+            .ToArray();
 
         var status   = UdpService.Status;
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
