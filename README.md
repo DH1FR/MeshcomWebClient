@@ -918,6 +918,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.6.16
+- **feat:** 📱 **QRZ-Name im Tab-Button** – der Vorname des Operators erscheint als kleiner Untertitel direkt im Chat-Tab-Button (immer sichtbar, kein Hover nötig)
+- **feat:** 🎟️ **Touch-Display-Support** – QRZ-Vorname wird als festes `· Name`-Badge inline bei jedem Rufzeichen angezeigt (Chat-Nachrichten und Monitor-Zeilen), ohne Hover-Interaktion
+- **perf:** ⚡ **Nicht-blockierendes QRZ-Laden** – Seiten rendern sofort; QRZ-Daten werden im Hintergrund nach dem ersten Render nachgeladen (`OnAfterRenderAsync` statt `OnInitializedAsync`)
+- **perf:** ⚡ **Doppelter Re-Render entfernt** – zweites `StateHasChanged` in `OnChatChanged` nur noch wenn tatsächlich neue QRZ-Daten hinzukamen
+- **perf:** ⚡ **Karte synchron** – `UpdateMarkersAsync` verwendet neuen synchronen `QrzService.GetCached()` statt sequentieller `await`-Kette
+- **feat:** 💾 **QRZ-Cache persistent** – Lookups werden in `qrz-cache.json` im `DataPath` gespeichert und beim nächsten App-Start automatisch geladen; jedes Rufzeichen wird nur noch einmal abgefragt (auch über Neustarts hinweg)
+
 ### v1.6.15
 - **feat:** 🔍 **QRZ.com callsign lookup** – optional integration with the QRZ.com XML API; free account returns operator first name + home QTH; session key fetched and refreshed automatically; results cached in memory per session
   - 📻 **MH list** – dedicated *Name / Location* column + hover tooltip on every callsign
