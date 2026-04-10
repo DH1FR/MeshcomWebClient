@@ -15,9 +15,10 @@ RUN dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
-# libicu is required by .NET globalization; tzdata for correct local time
+# libicu is required by .NET globalization; tzdata for correct local time;
+# ca-certificates is required for outgoing HTTPS connections (e.g. QRZ.com XML API)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libicu-dev tzdata \
+    && apt-get install -y --no-install-recommends libicu-dev tzdata ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
