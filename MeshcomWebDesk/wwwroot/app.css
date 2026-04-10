@@ -38,7 +38,6 @@ h1:focus {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    border-bottom: 3px solid #0f3460;
 }
 
 /* ===== Tab Bar ===== */
@@ -308,6 +307,38 @@ h1:focus {
 }
 .char-warn   { color: #e3b341; }
 .char-danger { color: #f85149; font-weight: 700; }
+
+/* ===== Pane Resizer Divider ===== */
+.pane-divider {
+    height: 6px;
+    background: #0f3460;
+    cursor: ns-resize;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+    transition: background 0.15s;
+}
+.pane-divider::after {
+    content: '';
+    width: 32px;
+    height: 2px;
+    background: #3a6a9a;
+    border-radius: 2px;
+}
+.pane-divider:hover {
+    background: #1a4a8a;
+}
+.pane-divider:hover::after {
+    background: #79b8ff;
+}
+.pane-divider-collapsed {
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.5;
+}
 
 /* ===== Lower Pane – Monitor ===== */
 .lower-pane {

@@ -91,8 +91,10 @@
         </div>
     </div>
 
+    <div id="pane-divider" class="pane-divider @(_showMonitor ? "" : "pane-divider-collapsed")"></div>
+
     @* ===== LOWER AREA: Monitor ===== *@
-    <div class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
+    <div id="lower-pane" class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
         <div class="pane-header">
             <span>📡 Monitor</span>
             <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries", "Voci", "Entradas")</span>
@@ -322,6 +324,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
+            catch (JSException) { }
+        }
+
         if (_scrollMessages)
         {
             _scrollMessages = false;

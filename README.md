@@ -68,6 +68,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Colour-coded rows: green for TX, cyan for position beacons, purple for telemetry, gold for ACKs
 - **UDP registration packet** (`{"type":"info",...}`) sent on startup is shown as a `SYS` TX entry
 - Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
+- **Resizable**: drag the divider bar between chat and monitor to adjust the split – last position is saved in `localStorage` and restored on the next visit
 - Collapsible on mobile (toggle button)
 
 ### 📊 Status bar
@@ -890,6 +891,15 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.13
+- **feat:** 📡 **Resizable monitor pane** – drag handle between chat and monitor lets the user resize the split freely (mouse + touch); last position persisted in `localStorage`
+- **fix:** DH1FR greeting is now only sent when the tab is opened by an **incoming** message (not when opened manually with `+`)
+- **fix:** 🔒 HTTP→HTTPS redirect disabled in non-`LanHttps` environments – `POST /api/telemetry` no longer redirects Home Assistant to HTTPS
+- **feat:** 🚀 Browser auto-opens at `http://localhost:5162` when launched directly as an executable (skipped in Docker / Windows service / systemd)
+- **feat:** 🎨 ASCII startup banner now shows **MESHCOM** + **WebDesk** both in block-letter style
+- **feat:** 📁 Portable default paths – `data/`, `logs/` and `data/keys/` stored next to the executable; no hard-coded `C:\Temp` paths
+- **docs:** `Screenshot_shell.png` added; 🚀 Startup section added to README
 
 ### v1.6.9
 - **fix:** 📱 **iOS PWA – Leeraum unten** (nur in PWA standalone, nicht im Browser) – Ursache war `height: -webkit-fill-available` in `app.css`, das im PWA-Modus eine kleinere Höhe als `100dvh` liefert; ersetzt durch `position: fixed; inset: 0` (von Apple empfohlene Methode für PWA Full-Screen-Layouts)
