@@ -13,6 +13,8 @@ html, body {
     font-size: 14px;
     background: #1a1a2e;
     color: #e0e0e0;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 h1:focus {
