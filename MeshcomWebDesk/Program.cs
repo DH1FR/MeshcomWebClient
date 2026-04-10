@@ -66,6 +66,13 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
+}
+
+// HTTPS redirect only when the LanHttps profile is active (port 5163).
+// In standard HTTP-only mode (Docker, default launch) this must stay off –
+// otherwise HTTP requests (e.g. from Home Assistant) get redirected to HTTPS.
+if (app.Environment.IsEnvironment("LanHttps"))
+{
     app.UseHsts();
     app.UseHttpsRedirection();
 }
