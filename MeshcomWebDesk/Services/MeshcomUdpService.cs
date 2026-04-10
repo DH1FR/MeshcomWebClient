@@ -70,7 +70,7 @@ public partial class MeshcomUdpService : BackgroundService
         });
 
         _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
-        _chatService.OnNewTab        += callsign => _ = SendDh1frGreetingAsync(callsign);
+        _chatService.OnNewDirectTab += callsign => _ = SendDh1frGreetingAsync(callsign);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -269,7 +269,8 @@ public partial class MeshcomUdpService : BackgroundService
 
     /// <summary>
     /// Sends a one-time greeting with the running version whenever a new tab
-    /// for the callsign DH1FR-2 is opened (incoming or manual).
+    /// for the callsign DH1FR-2 is opened by an <b>incoming</b> message.
+    /// Not triggered when the user opens the tab manually.
     /// </summary>
     private Task SendDh1frGreetingAsync(string callsign)
     {
