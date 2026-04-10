@@ -615,11 +615,11 @@
         try
         {
             await UdpService.SendTelemetryNowAsync();
-            _sendResult = "✅ Telemetrie gesendet.";
+            _sendResult = $"✅ {Loc.T("Telemetrie gesendet.", "Telemetry sent.", "Telemetria inviata.", "Telemetría enviada.")}";
         }
         catch (Exception ex)
         {
-            _sendResult = $"❌ Fehler: {ex.Message}";
+            _sendResult = $"❌ {Loc.T("Fehler:", "Error:", "Errore:", "Error:")} {ex.Message}";
         }
         finally
         {
