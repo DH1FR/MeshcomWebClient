@@ -92,11 +92,9 @@
     private async Task InitMapAsync()
     {
         var status = UdpService.Status;
-        double lat  = status.OwnLatitude  ?? 47.5;
-        double lon  = status.OwnLongitude ?? 14.0;
-        int    zoom = status.OwnLatitude.HasValue ? 10 : 6;
-
-        await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map", lat, lon, zoom);
+        await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map",
+            status.OwnLatitude.HasValue  ? (object)status.OwnLatitude.Value  : null,
+            status.OwnLongitude.HasValue ? (object)status.OwnLongitude.Value : null);
         _mapInitialized = true;
         await UpdateMarkersAsync();
         StateHasChanged();

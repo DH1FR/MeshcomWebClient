@@ -7,9 +7,19 @@ window.meshcomMap = (function () {
     var _ownLayer     = null;
     var _lastBounds   = null;   // saved after every updateMarkers for fitAll()
     var _initialFitDone = false; // fit once on first load, then user controls zoom
+    var _readyToSave    = false; // only persist view after initial fit is complete
+    var STORAGE_KEY     = 'meshcom_map_view';
 
     function esc(s) {
         return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function saveView() {
+        if (!_map || !_readyToSave) return;
+        try {
+            var c = _map.getCenter();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ lat: c.lat, lon: c.lng, zoom: _map.getZoom() }));
+        } catch (e) { }
     }
 
     // APRS-style: filled circle (signal-colour) + callsign label below
@@ -35,17 +45,35 @@ window.meshcomMap = (function () {
     }
 
     return {
-        init: function (elementId, centerLat, centerLon, zoom) {
+        init: function (elementId, ownLat, ownLon) {
             if (_map) { _map.remove(); _map = null; }
             _lastBounds     = null;
             _initialFitDone = false;
-            _map = L.map(elementId).setView([centerLat, centerLon], zoom);
+            _readyToSave    = false;
+
+            // Restore last saved view (persists across navigation / page reloads)
+            var saved = null;
+            try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { }
+
+            var startLat  = (saved && saved.lat  != null) ? saved.lat  : (ownLat  != null ? ownLat  : 47.5);
+            var startLon  = (saved && saved.lon  != null) ? saved.lon  : (ownLon  != null ? ownLon  : 14.0);
+            var startZoom = (saved && saved.zoom != null) ? saved.zoom : 6;
+
+            _map = L.map(elementId).setView([startLat, startLon], startZoom);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
                 maxZoom: 19
             }).addTo(_map);
             _stationLayer = L.layerGroup().addTo(_map);
             _ownLayer     = L.layerGroup().addTo(_map);
+
+            if (saved) {
+                // Saved view restored – skip first-run auto-fit, start saving immediately
+                _initialFitDone = true;
+                _readyToSave    = true;
+            }
+
+            _map.on('moveend zoomend', saveView);
         },
 
         updateMarkers: function (stations, ownCallsign, ownLat, ownLon) {
@@ -78,14 +106,24 @@ window.meshcomMap = (function () {
             // Save bounds for manual fitAll button
             if (bounds.length > 0) _lastBounds = bounds.slice();
 
-            // Auto-fit only once on the very first load with data
+            // First open (no saved state): zoom to 50 km around own position,
+            // or fall back to fitting all visible stations.
             if (!_initialFitDone && bounds.length > 0) {
                 _initialFitDone = true;
-                if (bounds.length === 1) {
+                if (ownLat != null && ownLon != null) {
+                    var r    = 50;
+                    var dLat = r / 111.0;
+                    var dLon = r / (111.0 * Math.cos(ownLat * Math.PI / 180));
+                    _map.fitBounds([
+                        [ownLat - dLat, ownLon - dLon],
+                        [ownLat + dLat, ownLon + dLon]
+                    ]);
+                } else if (bounds.length === 1) {
                     _map.setView(bounds[0], 11);
                 } else {
                     _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
                 }
+                _readyToSave = true; // begin persisting view after initial fit
             }
         },
 
