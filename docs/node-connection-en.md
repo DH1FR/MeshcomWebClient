@@ -8,9 +8,12 @@ This guide explains which settings need to be configured on the **MeshCom node**
 
 The node and the WebDesk PC must be reachable in the **same local network (LAN/Wi-Fi)**.
 
+> 📋 **Note on example values:** All IP addresses, ports and callsigns in this guide are **examples only**. In your network the addresses may look completely different (e.g. `10.0.0.x`, `172.16.x.x` or another subnet). Adjust all values to match your own network configuration.
+
 ```
 MeshCom Node  ◄──── UDP 1799 ────►  WebDesk PC
 192.168.1.60                         192.168.1.100
+(example IP)                         (example IP)
 ```
 
 ---

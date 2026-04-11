@@ -8,9 +8,12 @@ Diese Anleitung erklärt, welche Einstellungen am **MeshCom-Node** und in **WebD
 
 Node und WebDesk-PC müssen im **selben lokalen Netzwerk (LAN/WLAN)** erreichbar sein.
 
+> 📋 **Hinweis zu den Beispielwerten:** Alle IP-Adressen, Ports und Rufzeichen in dieser Anleitung sind **Beispiele**. In deinem Netzwerk können die Adressen völlig anders aussehen (z. B. `10.0.0.x`, `172.16.x.x` oder ein anderer Adressbereich). Passe alle Werte entsprechend deiner eigenen Netzwerkkonfiguration an.
+
 ```
 MeshCom-Node  ◄──── UDP 1799 ────►  WebDesk-PC
 192.168.1.60                         192.168.1.100
+(Beispiel-IP)                        (Beispiel-IP)
 ```
 
 ---

@@ -8,9 +8,12 @@ Questa guida spiega quali impostazioni devono essere configurate sul **nodo Mesh
 
 Il nodo e il PC con WebDesk devono essere raggiungibili nella **stessa rete locale (LAN/Wi-Fi)**.
 
+> 📋 **Nota sui valori di esempio:** Tutti gli indirizzi IP, le porte e i nominativi in questa guida sono **solo esempi**. Nella tua rete gli indirizzi possono essere completamente diversi (es. `10.0.0.x`, `172.16.x.x` o un'altra subnet). Adatta tutti i valori alla tua configurazione di rete.
+
 ```
 Nodo MeshCom  ◄──── UDP 1799 ────►  PC WebDesk
 192.168.1.60                         192.168.1.100
+(IP di esempio)                      (IP di esempio)
 ```
 
 ---

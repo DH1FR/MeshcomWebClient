@@ -8,9 +8,12 @@ Esta guía explica qué ajustes deben configurarse en el **nodo MeshCom** y en *
 
 El nodo y el PC con WebDesk deben ser accesibles en la **misma red local (LAN/Wi-Fi)**.
 
+> 📋 **Nota sobre los valores de ejemplo:** Todas las direcciones IP, puertos e indicativos de esta guía son **solo ejemplos**. En tu red las direcciones pueden ser completamente distintas (p.ej. `10.0.0.x`, `172.16.x.x` u otra subred). Ajusta todos los valores según tu propia configuración de red.
+
 ```
 Nodo MeshCom  ◄──── UDP 1799 ────►  PC WebDesk
 192.168.1.60                         192.168.1.100
+(IP de ejemplo)                      (IP de ejemplo)
 ```
 
 ---
