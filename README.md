@@ -28,6 +28,15 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+<p align="center">
+  <strong>☕ Do you like my work? Then buy me a coffee! ☕</strong><br><br>
+  <a href="https://paypal.me/DH1FR">
+    <img src="https://img.shields.io/badge/Donate%20via%20PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
+  </a>
+</p>
+
+---
+
 ## 💡 Motivation
 
 MeshCom always reminds me a little of the good old **Packet Radio** days – digital text communication over radio, simple and direct.
