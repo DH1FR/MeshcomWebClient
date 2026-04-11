@@ -641,12 +641,11 @@
         if (string.IsNullOrEmpty(text) || !text.Contains("://"))
             return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
 
-        var jsMsg = Loc.T(
+        var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
             "Externer Link – diese Seite wird außerhalb von MeshCom WebDesk geöffnet.\nFortfahren?",
             "External link – this page opens outside MeshCom WebDesk.\nContinue?",
             "Link esterno – questa pagina si aprirà fuori da MeshCom WebDesk.\nContinuare?",
-            "Enlace externo – esta página se abrirá fuera de MeshCom WebDesk.\n¿Continuar?")
-            .Replace("\\", "\\\\").Replace("'", "\\'");
+            "Enlace externo – esta página se abrirá fuera de MeshCom WebDesk.\n¿Continuar?"));
 
         var sb = new System.Text.StringBuilder();
         var lastIndex = 0;
@@ -656,7 +655,7 @@
             var href    = System.Net.WebUtility.HtmlEncode(match.Value);
             var display = System.Net.WebUtility.HtmlEncode(
                 match.Value.Length > 55 ? match.Value[..55] + "\u2026" : match.Value);
-            sb.Append($"<a class=\"msg-url\" href=\"{href}\" target=\"_blank\" rel=\"noopener noreferrer\" onclick=\"return confirm('{jsMsg}')\">{display}</a>");
+            sb.Append($"<a class=\"msg-url\" href=\"{href}\" data-ext-url=\"{href}\" data-ext-msg=\"{confirmMsg}\" target=\"_blank\" rel=\"noopener noreferrer\">{display}</a>");
             lastIndex = match.Index + match.Length;
         }
         sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..]));

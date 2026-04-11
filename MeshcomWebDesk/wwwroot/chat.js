@@ -64,3 +64,20 @@ window.meshcomChat = (function () {
         }
     };
 }());
+
+// ── External link confirmation ────────────────────────────────────────────
+// Runs in capture phase so it fires BEFORE Blazor's event delegation.
+// Reads the URL and confirm message from data attributes set by FormatMessageWithLinks().
+(function () {
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('a.msg-url[data-ext-url]');
+        if (!link) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var url = link.dataset.extUrl;
+        var msg = link.dataset.extMsg || url;
+        if (window.confirm(msg)) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    }, true /* capture */);
+}());
