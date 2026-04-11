@@ -9,6 +9,7 @@
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject IJSRuntime JS
 @inject QrzService QrzService
+@inject ILogger<Map> Logger
 @implements IDisposable
 
 <PageTitle>🗺️ @Loc.T("Karte", "Map", "Mappa", "Mapa") – MeshCom WebDesk</PageTitle>
@@ -92,13 +93,29 @@
 
     private async Task InitMapAsync()
     {
-        var status = UdpService.Status;
-        await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map",
-            status.OwnLatitude.HasValue  ? (object)status.OwnLatitude.Value  : null,
-            status.OwnLongitude.HasValue ? (object)status.OwnLongitude.Value : null);
-        _mapInitialized = true;
-        await UpdateMarkersAsync();
-        StateHasChanged();
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                var status = UdpService.Status;
+                await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map",
+                    status.OwnLatitude.HasValue  ? (object)status.OwnLatitude.Value  : null,
+                    status.OwnLongitude.HasValue ? (object)status.OwnLongitude.Value : null);
+                _mapInitialized = true;
+                await UpdateMarkersAsync();
+                StateHasChanged();
+                return;
+            }
+            catch (Exception ex) when (attempt < 3 && !_disposed)
+            {
+                Logger.LogWarning("Map init attempt {Attempt} failed: {Message} – retrying in 500 ms", attempt, ex.Message);
+                await Task.Delay(500);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Map init failed after 3 attempts");
+            }
+        }
     }
 
     private async Task UpdateMarkersAsync()
