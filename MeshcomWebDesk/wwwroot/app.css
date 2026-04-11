@@ -1168,17 +1168,32 @@ h1:focus {
     gap: 0.5rem;
 }
 
-.settings-help-link {
-    font-size: 0.8rem;
+.settings-help-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.6rem 1rem;
+    background: rgba(88, 166, 255, 0.08);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    border-radius: 7px;
     color: #58a6ff;
+    font-size: 0.85rem;
+    font-weight: 500;
     text-decoration: none;
-    opacity: 0.7;
-    line-height: 1;
-    transition: opacity 0.15s;
+    transition: background 0.15s, border-color 0.15s;
 }
 
-.settings-help-link:hover {
-    opacity: 1;
+.settings-help-banner:hover {
+    background: rgba(88, 166, 255, 0.16);
+    border-color: rgba(88, 166, 255, 0.6);
+    color: #a0c4ff;
+}
+
+.settings-help-banner-arrow {
+    margin-left: auto;
+    font-size: 1rem;
+    opacity: 0.7;
 }
 
 .settings-grid {
