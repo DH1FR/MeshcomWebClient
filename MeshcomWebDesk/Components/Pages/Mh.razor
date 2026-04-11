@@ -286,8 +286,13 @@
         foreach (var s in stations)
         {
             if (_qrzData.ContainsKey(s.Callsign)) continue;
-            _qrzData[s.Callsign] = await QrzService.LookupAsync(s.Callsign);
-            added = true;
+            if (QrzService.TryGetCached(s.Callsign, out var cached))
+                _qrzData[s.Callsign] = cached;          // already known – sync, no log entry
+            else
+            {
+                _qrzData[s.Callsign] = await QrzService.LookupAsync(s.Callsign);   // new callsign
+                added = true;
+            }
         }
         return added;
     }

@@ -573,8 +573,13 @@
         foreach (var cs in callsigns)
         {
             if (_qrzData.ContainsKey(cs)) continue;
-            _qrzData[cs] = await QrzService.LookupAsync(cs);
-            added = true;
+            if (QrzService.TryGetCached(cs, out var cached))
+                _qrzData[cs] = cached;          // already known – sync, no log entry
+            else
+            {
+                _qrzData[cs] = await QrzService.LookupAsync(cs);   // new callsign, may hit API
+                added = true;
+            }
         }
         return added;
     }

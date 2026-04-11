@@ -105,6 +105,24 @@ public class QrzService
         return _cache.TryGetValue(bare, out var entry) && entry is not null ? entry.Info : null;
     }
 
+    /// <summary>
+    /// Tries to return cached QRZ data for a callsign without any network request.
+    /// Returns <c>true</c> when the callsign has been looked up before (even if QRZ returned no
+    /// result, in which case <paramref name="info"/> is <c>null</c>).
+    /// Returns <c>false</c> when the callsign has never been queried yet.
+    /// </summary>
+    public bool TryGetCached(string callsign, out QrzInfo? info)
+    {
+        var bare = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
+        if (_cache.TryGetValue(bare, out var entry) && entry is not null)
+        {
+            info = entry.Info;
+            return true;
+        }
+        info = null;
+        return false;
+    }
+
     // ── Disk persistence ───────────────────────────────────────────────────────
 
     private void LoadCacheFromDisk()
