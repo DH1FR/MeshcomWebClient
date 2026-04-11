@@ -28,6 +28,7 @@ RUN mkdir -p /app/logs
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5162
+ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV Meshcom__LogPath=/app/logs
 ENV TZ=Europe/Berlin
 
