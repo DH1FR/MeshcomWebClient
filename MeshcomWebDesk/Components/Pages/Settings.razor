@@ -42,7 +42,15 @@
 
         <!-- Verbindung / Connection -->
         <div class="settings-section">
-            <h2 class="settings-section-title">🔌 @Loc.T("Verbindung", "Connection", "Connessione", "Conexión")</h2>
+            <h2 class="settings-section-title">
+                🔌 @Loc.T("Verbindung", "Connection", "Connessione", "Conexión")
+                <a class="settings-help-link"
+                   href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
+                   target="_blank" rel="noopener"
+                   title="@Loc.T("Hilfe: Node-Verbindung einrichten", "Help: Set up node connection", "Aiuto: configurare la connessione al nodo", "Ayuda: configurar la conexión al nodo")">
+                    ❓
+                </a>
+            </h2>
             <div class="settings-grid">
                 <label>Listen IP</label>
                 <input type="text" @bind="_model.ListenIp" />

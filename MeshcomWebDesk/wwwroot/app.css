@@ -1163,6 +1163,22 @@ h1:focus {
     margin: 0 0 0.9rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #0f3460;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.settings-help-link {
+    font-size: 0.8rem;
+    color: #58a6ff;
+    text-decoration: none;
+    opacity: 0.7;
+    line-height: 1;
+    transition: opacity 0.15s;
+}
+
+.settings-help-link:hover {
+    opacity: 1;
 }
 
 .settings-grid {
