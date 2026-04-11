@@ -466,6 +466,8 @@ public partial class MeshcomUdpService : BackgroundService
             var root = doc.RootElement;
 
             var parts = new List<string>();
+            double? ownTemp = null, ownHumidity = null, ownPressure = null;
+
             foreach (var entry in s.TelemetryMapping)
             {
                 if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
@@ -481,6 +483,12 @@ public partial class MeshcomUdpService : BackgroundService
                     value = parsed;
                 else
                     continue;
+
+                // Capture well-known weather values by unit for map popup
+                var unitNorm = entry.Unit.Trim().TrimStart('°').ToLowerInvariant();
+                if      (unitNorm is "c")                     ownTemp      ??= value;
+                else if (unitNorm is "%")                     ownHumidity  ??= value;
+                else if (unitNorm is "hpa" or "mbar" or "mb") ownPressure  ??= value;
 
                 var decimals  = Math.Max(0, entry.Decimals);
                 var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
@@ -543,6 +551,16 @@ public partial class MeshcomUdpService : BackgroundService
                 // Brief pause between consecutive packets to avoid node flooding
                 if (i < buckets.Count - 1)
                     await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+
+            // Persist captured weather values in Status so the map popup can show them
+            if (ownTemp.HasValue || ownHumidity.HasValue || ownPressure.HasValue)
+            {
+                Status.OwnTemp             = ownTemp;
+                Status.OwnHumidity         = ownHumidity;
+                Status.OwnPressure         = ownPressure;
+                Status.OwnTelemetrySentTime = DateTime.UtcNow;
+                NotifyStatusChange();
             }
         }
         catch (Exception ex)

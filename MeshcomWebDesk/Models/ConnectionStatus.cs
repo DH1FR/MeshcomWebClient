@@ -55,4 +55,18 @@ public class ConnectionStatus
 
     /// <summary>Scheduled time of the next telemetry transmission. Null when telemetry is inactive.</summary>
     public DateTime? TelemetryNextSend { get; set; }
+
+    // ── Own transmitted telemetry (captured on send) ──────────────────────
+
+    /// <summary>Temperature (°C) from the last transmitted telemetry, if a unit of C/°C was found.</summary>
+    public double? OwnTemp { get; set; }
+
+    /// <summary>Relative humidity (%) from the last transmitted telemetry, if a unit of % was found.</summary>
+    public double? OwnHumidity { get; set; }
+
+    /// <summary>Atmospheric pressure (hPa) from the last transmitted telemetry, if a unit of hPa/mbar was found.</summary>
+    public double? OwnPressure { get; set; }
+
+    /// <summary>UTC timestamp when the own telemetry values were last sent.</summary>
+    public DateTime? OwnTelemetrySentTime { get; set; }
 }

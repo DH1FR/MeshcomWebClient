@@ -266,10 +266,15 @@
 
         var cfg = SettingsMonitor.CurrentValue;
 
-        // Own station telemetry: look up own callsign in MhList (populated when the node
-        // echoes back its own tele packet via UDP).
+        // Own station telemetry: prefer values captured directly on send (always available),
+        // fall back to MhList lookup in case the node echoes back its own tele packet via UDP.
         var ownMh = mhList.FirstOrDefault(s =>
             string.Equals(s.Callsign, cfg.MyCallsign, StringComparison.OrdinalIgnoreCase));
+
+        var ownTemp      = status.OwnTemp      ?? ownMh?.Temp1;
+        var ownHumidity  = status.OwnHumidity  ?? ownMh?.Humidity;
+        var ownPressure  = status.OwnPressure  ?? ownMh?.Pressure;
+        var ownTelemTime = status.OwnTelemetrySentTime ?? ownMh?.LastTelemetryTime;
 
         var ownInfo = new
         {
@@ -284,11 +289,11 @@
                 ? status.BeaconNextSend.Value.ToString("HH:mm") : null,
             deviceIp   = cfg.DeviceIp,
             devicePort = cfg.DevicePort,
-            temp       = ownMh?.Temp1,
-            humidity   = ownMh?.Humidity,
-            pressure   = ownMh?.Pressure,
-            telemMins  = ownMh?.LastTelemetryTime.HasValue == true
-                ? (int)(DateTime.UtcNow - ownMh.LastTelemetryTime!.Value).TotalMinutes
+            temp       = ownTemp,
+            humidity   = ownHumidity,
+            pressure   = ownPressure,
+            telemMins  = ownTelemTime.HasValue
+                ? (int)(DateTime.UtcNow - ownTelemTime.Value).TotalMinutes
                 : (int?)null
         };
 
