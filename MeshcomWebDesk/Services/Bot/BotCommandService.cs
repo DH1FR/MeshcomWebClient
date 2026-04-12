@@ -65,9 +65,6 @@ public class BotCommandService
         var sb = new StringBuilder("Befehle: --help");
         foreach (var cmd in AllCommands)
             sb.Append($", --{cmd.Name}");
-
-        // Truncate to MeshCom 149-char wire limit
-        const int MaxLength = 149;
-        return sb.Length <= MaxLength ? sb.ToString() : sb.ToString()[..MaxLength];
+        return sb.ToString();
     }
 }

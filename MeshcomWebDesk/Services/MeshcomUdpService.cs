@@ -285,13 +285,57 @@ public partial class MeshcomUdpService : BackgroundService
 
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
             reply = ExpandVariables(reply, message.From);
-            _logger.LogInformation("Bot reply to {From}: {Reply}", message.From, reply);
-            await SendMessageAsync(message.From, reply);
+
+            var parts = SplitBotReply(reply);
+            _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
+                message.From, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
+
+            for (var i = 0; i < parts.Count; i++)
+            {
+                await SendMessageAsync(message.From, parts[i]);
+                if (i < parts.Count - 1)
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling bot command from {From}: {Text}", message.From, message.Text);
         }
+    }
+
+    /// <summary>
+    /// Splits a bot reply into chunks that fit within the MeshCom 149-character wire limit.
+    /// Splits preferentially at the last space or comma within the limit to avoid cutting words.
+    /// Falls back to a hard split only when no whitespace or comma is found.
+    /// </summary>
+    private static IReadOnlyList<string> SplitBotReply(string text, int maxLen = 149)
+    {
+        if (text.Length <= maxLen)
+            return [text];
+
+        var parts = new List<string>();
+        var span  = text.AsSpan();
+
+        while (!span.IsEmpty)
+        {
+            if (span.Length <= maxLen)
+            {
+                parts.Add(span.ToString());
+                break;
+            }
+
+            var slice   = span[..maxLen];
+            var splitAt = slice.LastIndexOf(' ');
+            if (splitAt <= 0) splitAt = slice.LastIndexOf(',');
+            if (splitAt <= 0) splitAt = maxLen;   // hard split as last resort
+
+            parts.Add(span[..splitAt].TrimEnd().ToString());
+            span = splitAt < maxLen
+                ? span[(splitAt + 1)..].TrimStart(' ')
+                : span[splitAt..];
+        }
+
+        return parts;
     }
 
     /// <summary>
