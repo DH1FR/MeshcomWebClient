@@ -134,6 +134,10 @@ public class ChatService
             || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
 
+        // Update MH list BEFORE triggering the auto-reply so that RSSI, relay path and
+        // hardware data from this message are available to ExpandVariables immediately.
+        UpdateMhList(message);
+
         ChatTab? tab = tabAllowed ? GetOrCreateTab(tabKey, triggerAutoReply: true) : null;
         lock (_lock)
         {
@@ -145,7 +149,8 @@ public class ChatService
             }
         }
 
-        UpdateMhList(message);
+        NotifyChange();
+        _ = _webhook.SendAsync(message, "message");
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
     }
