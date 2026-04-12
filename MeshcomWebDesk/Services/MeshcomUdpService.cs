@@ -286,7 +286,7 @@ public partial class MeshcomUdpService : BackgroundService
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
             reply = ExpandVariables(reply, message.From);
 
-            var parts = SplitBotReply(reply);
+            var parts = SplitMessage(reply);
             _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
                 message.From, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
 
@@ -304,11 +304,11 @@ public partial class MeshcomUdpService : BackgroundService
     }
 
     /// <summary>
-    /// Splits a bot reply into chunks that fit within the MeshCom 149-character wire limit.
+    /// Splits a message into chunks that fit within the MeshCom 149-character wire limit.
     /// Splits preferentially at the last space or comma within the limit to avoid cutting words.
-    /// Falls back to a hard split only when no whitespace or comma is found.
+    /// Falls back to a hard split only when no word boundary is found.
     /// </summary>
-    private static IReadOnlyList<string> SplitBotReply(string text, int maxLen = 149)
+    private static IReadOnlyList<string> SplitMessage(string text, int maxLen = 149)
     {
         if (text.Length <= maxLen)
             return [text];
@@ -418,8 +418,14 @@ public partial class MeshcomUdpService : BackgroundService
 
             var destination = s.BeaconGroup.TrimStart('#');
             var beaconText  = ExpandVariables(s.BeaconText);
-            _logger.LogInformation("Sending beacon to {Group}", s.BeaconGroup);
-            await SendMessageAsync(destination, beaconText, s.BeaconGroup);
+            var parts       = SplitMessage(beaconText);
+            _logger.LogInformation("Sending beacon to {Group} ({Parts} part(s))", s.BeaconGroup, parts.Count);
+            for (var i = 0; i < parts.Count; i++)
+            {
+                await SendMessageAsync(destination, parts[i], s.BeaconGroup);
+                if (i < parts.Count - 1)
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+            }
             lastSent = DateTime.Now;
             SetBeaconStatus(true, lastSent + interval);
         }
@@ -513,7 +519,7 @@ public partial class MeshcomUdpService : BackgroundService
     /// Immediately sends the configured beacon to <see cref="MeshcomSettings.BeaconGroup"/>.
     /// Used by the Settings UI to test the beacon without waiting for the interval.
     /// </summary>
-    public Task SendBeaconNowAsync()
+    public async Task SendBeaconNowAsync()
     {
         var s = _settings;
         if (string.IsNullOrWhiteSpace(s.BeaconGroup))
@@ -523,8 +529,14 @@ public partial class MeshcomUdpService : BackgroundService
 
         var destination = s.BeaconGroup.TrimStart('#');
         var beaconText  = ExpandVariables(s.BeaconText);
-        _logger.LogInformation("Beacon test send to {Group}: {Text}", s.BeaconGroup, beaconText);
-        return SendMessageAsync(destination, beaconText, s.BeaconGroup);
+        var parts       = SplitMessage(beaconText);
+        _logger.LogInformation("Beacon test send to {Group} ({Parts} part(s)): {Text}", s.BeaconGroup, parts.Count, beaconText);
+        for (var i = 0; i < parts.Count; i++)
+        {
+            await SendMessageAsync(destination, parts[i], s.BeaconGroup);
+            if (i < parts.Count - 1)
+                await Task.Delay(TimeSpan.FromSeconds(2));
+        }
     }
 
     /// <summary>
