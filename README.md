@@ -987,7 +987,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
-### v1.6.21
+### v1.7.0
 - **feat:** 🤖 **Bot command system** – incoming direct messages starting with `--` (or `—` em dash) are interpreted as bot commands; built-in: `--help`, `--version`, `--time`, `--mh`; fully configurable user-defined commands with `{variable}` placeholder support in **Settings → 🤖 Bot**; `IBotCommand` interface for developer extensions
 - **feat:** ↩️ **Auto-Reply – `{route}` and `{hops}` template variables** – relay path and hop count from the sender's last message are now available in `AutoReplyText`
 - **feat:** ⚙️ **Auto-Reply – collapsible variable reference table** in Settings; all supported `{variable}` placeholders with live example values shown inline
