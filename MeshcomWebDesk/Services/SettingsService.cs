@@ -44,6 +44,7 @@ public class SettingsService
                 ["GroupFilterEnabled"]  = s.GroupFilterEnabled,
                 ["Groups"]              = new JsonArray(s.Groups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["DataPath"]            = s.DataPath,
+                ["TimeOffsetHours"]     = s.TimeOffsetHours,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
                 ["BotEnabled"]         = s.BotEnabled,

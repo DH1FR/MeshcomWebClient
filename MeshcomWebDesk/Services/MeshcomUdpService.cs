@@ -274,12 +274,24 @@ public partial class MeshcomUdpService : BackgroundService
 
     private async Task HandleBotCommandAsync(MeshcomMessage message)
     {
-        if (!_settings.BotEnabled) return;
+        try
+        {
+            _logger.LogDebug("Bot command received from {From}: {Text}", message.From, message.Text);
+            if (!_settings.BotEnabled)
+            {
+                _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
+                return;
+            }
 
-        var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
-        reply = ExpandVariables(reply, message.From);
-        _logger.LogInformation("Bot reply to {From}: {Reply}", message.From, reply);
-        await SendMessageAsync(message.From, reply);
+            var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
+            reply = ExpandVariables(reply, message.From);
+            _logger.LogInformation("Bot reply to {From}: {Reply}", message.From, reply);
+            await SendMessageAsync(message.From, reply);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling bot command from {From}: {Text}", message.From, message.Text);
+        }
     }
 
     /// <summary>
