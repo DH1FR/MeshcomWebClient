@@ -260,6 +260,19 @@
                     });
                 }
             }
+
+            // Direct connections (HopCount == 0): no relay node in path, draw a straight line
+            foreach (var s in mhList.Where(s => s.HopCount == 0 && posLookup.ContainsKey(s.Callsign)))
+            {
+                relayLines.Add(new
+                {
+                    coords  = new[] { posLookup[s.Callsign], ownPos },
+                    rssi    = s.LastRssi,
+                    label   = s.Callsign,
+                    count   = Math.Max(s.RelayPathCount, 1),
+                    partial = false
+                });
+            }
         }
 
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
