@@ -46,6 +46,12 @@ public class ChatService
     public event Action<string>? OnNewTab;
 
     /// <summary>
+    /// Raised when an incoming direct message addressed to us starts with "--" (bot command).
+    /// Fired after the message is recorded in the tab so the bot reply appears after it.
+    /// </summary>
+    public event Action<MeshcomMessage>? OnBotCommand;
+
+    /// <summary>
     /// The key of the last tab the user actively selected.
     /// Persisted in memory (singleton lifetime) so Chat.razor can restore it
     /// immediately in OnInitialized without requiring JS interop.
@@ -134,7 +140,14 @@ public class ChatService
             || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
 
-        ChatTab? tab = tabAllowed ? GetOrCreateTab(tabKey, triggerAutoReply: true) : null;
+        // Update MH list BEFORE triggering the auto-reply so that RSSI, relay path and
+        // hardware data from this message are available to ExpandVariables immediately.
+        UpdateMhList(message);
+
+        ChatTab? tab = null;
+        bool wasNewDirect = false;
+        if (tabAllowed)
+            tab = GetOrCreateTab(tabKey, out wasNewDirect);
         lock (_lock)
         {
             AppendToMonitor(message);
@@ -145,9 +158,19 @@ public class ChatService
             }
         }
 
-        UpdateMhList(message);
+        // Fire OnNewDirectTab AFTER the incoming message is in the tab so the auto-reply
+        // (AddOutgoingMessage) appears after it in the conversation, not before.
+        if (wasNewDirect)
+            OnNewDirectTab?.Invoke(message.From);
+
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
+
+        // Fire bot command event for direct messages to us starting with "--" or em dash
+        if (!message.IsBroadcast &&
+            string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase) &&
+            MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text))
+            OnBotCommand?.Invoke(message);
     }
 
     /// <summary>
@@ -428,9 +451,11 @@ public class ChatService
                 Battery          = message.Battery,
                 HwId             = message.HwId,
                 Firmware         = message.Firmware,
-                LastRelayPath    = message.RelayPath,
-                HopCount         = message.RelayPath?.Split(',').Length - 1 ?? 0,
-                RelayPathCount   = message.RelayPath != null ? 1 : 0,
+                LastRelayPath        = message.RelayPath,
+                HopCount             = message.RelayPath?.Split(',').Length - 1 ?? 0,
+                RelayPathCount       = message.RelayPath != null ? 1 : 0,
+                DirectLinkConfirmed  = (message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
+                                       && message.RelayPath == null,
                 Temp1             = message.IsTelemetry ? message.Temp1     : null,
                 Humidity          = message.IsTelemetry ? message.Humidity  : null,
                 Pressure          = message.IsTelemetry ? message.Pressure  : null,
@@ -450,6 +475,10 @@ public class ChatService
                 if (message.Battery.HasValue) s.Battery  = message.Battery;
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
+                if ((message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
+                    && message.RelayPath == null)
+                    s.DirectLinkConfirmed = true;
+
                 if (message.RelayPath is not null)
                 {
                     var hops = message.RelayPath.Split(',').Length - 1;
@@ -491,7 +520,7 @@ public class ChatService
         _ = _sink.WriteAsync(message);
     }
 
-    private ChatTab GetOrCreateTab(string key, bool triggerAutoReply = false)
+    private ChatTab GetOrCreateTab(string key, out bool wasNewDirect)
     {
         var newTab = new ChatTab
         {
@@ -504,18 +533,17 @@ public class ChatService
             }
         };
 
-        var tab    = _tabs.GetOrAdd(key, newTab);
-        bool wasNew = ReferenceEquals(tab, newTab);
+        var tab = _tabs.GetOrAdd(key, newTab);
+        wasNewDirect = ReferenceEquals(tab, newTab) && key != "*" && !key.StartsWith('#');
 
-        if (wasNew && key != "*" && !key.StartsWith('#'))
-        {
+        if (wasNewDirect)
             OnNewTab?.Invoke(key);
-            if (triggerAutoReply)
-                OnNewDirectTab?.Invoke(key);
-        }
 
         return tab;
     }
+
+    // Convenience overload for callers that don't need the wasNewDirect flag.
+    private ChatTab GetOrCreateTab(string key) => GetOrCreateTab(key, out _);
 
     private void NotifyChange()
     {

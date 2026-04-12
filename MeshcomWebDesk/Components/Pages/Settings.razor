@@ -140,7 +140,50 @@
                 <label>Auto-Reply Text</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.AutoReplyText" />
-                    <span class="settings-hint">@Loc.T("{version} wird durch die aktuelle Versionsnummer ersetzt.", "{version} is replaced with the current version number.", "{version} viene sostituito con il numero di versione.", "{version} se reemplaza con el número de versión.")</span>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <span class="settings-hint">@Loc.T("Variablen verfügbar:", "Variables available:", "Variabili disponibili:", "Variables disponibles:")</span>
+                        <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
+                                @onclick="() => _showAutoReplyVars = !_showAutoReplyVars">
+                            📋 @(_showAutoReplyVars
+                                ? Loc.T("Ausblenden", "Hide", "Nascondi", "Ocultar")
+                                : Loc.T("Anzeigen", "Show", "Mostra", "Mostrar"))
+                        </button>
+                    </div>
+                    @if (_showAutoReplyVars)
+                    {
+                        var ver  = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
+                        var now  = DateTime.Now;
+                        <table class="telemetry-mapping-table" style="margin-top:0.5rem;font-size:12px">
+                            <thead>
+                                <tr>
+                                    <th>@Loc.T("Variable", "Variable", "Variabile", "Variable")</th>
+                                    <th>@Loc.T("Bedeutung", "Meaning", "Significato", "Significado")</th>
+                                    <th>@Loc.T("Beispiel", "Example", "Esempio", "Ejemplo")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version",          "Versione app",           "Versión app")</td>          <td style="font-family:monospace">@ver</td></tr>
+                                <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",   "Own callsign",          "Nominativo proprio",     "Indicativo propio")</td>    <td style="font-family:monospace">@_model.MyCallsign</td></tr>
+                                <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen","Caller's callsign",    "Nominativo chiamante",   "Indicativo llamante")</td>  <td style="font-family:monospace">OE1KBC-1</td></tr>
+                                <tr><td><code>{dest-name}</code></td><td>@Loc.T("QRZ-Vorname",          "QRZ first name",        "Nome QRZ",               "Nombre QRZ")</td>           <td style="font-family:monospace;color:#7ee787">@Loc.T("Max ⚠️ nur wenn gecacht","Max ⚠️ if cached","Max ⚠️ se in cache","Max ⚠️ si en caché")</td></tr>
+                                <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("QRZ-Ort",              "QRZ location",          "Luogo QRZ",              "Lugar QRZ")</td>            <td style="font-family:monospace;color:#7ee787">@Loc.T("Wien ⚠️ nur wenn gecacht","Wien ⚠️ if cached","Wien ⚠️ se in cache","Wien ⚠️ si en caché")</td></tr>
+                                <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",           "RSSI (dBm)",            "RSSI (dBm)",             "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
+                                <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",             "SNR (dB)",              "SNR (dB)",               "SNR (dB)")</td>             <td style="font-family:monospace">9.5</td></tr>
+                                <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",        "Hardware name",         "Nome hardware",          "Nombre hardware")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
+                                <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad (leer = direkt)","Relay path (empty = direct)","Percorso relay (vuoto = diretto)","Ruta relay (vacío = directo)")</td> <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
+                                <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops (0 = direkt)","Relay hop count (0 = direct)","Numero hop relay (0 = diretto)","Número saltos relay (0 = directo)")</td> <td style="font-family:monospace">1</td></tr>
+                                <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",      "Current date",          "Data corrente",          "Fecha actual")</td>         <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
+                                <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",     "Current time",          "Ora corrente",           "Hora actual")</td>          <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                            </tbody>
+                        </table>
+                        <p style="font-size:11px;color:#8b949e;margin-top:4px">
+                            ⚠️ @Loc.T(
+                                "{dest-name} und {dest-loc} sind nur verfügbar, wenn das Rufzeichen bereits im QRZ-Cache liegt.",
+                                "{dest-name} and {dest-loc} are only available if the callsign is already in the QRZ cache.",
+                                "{dest-name} e {dest-loc} sono disponibili solo se il nominativo è già nella cache QRZ.",
+                                "{dest-name} y {dest-loc} solo están disponibles si el indicativo ya está en la caché QRZ.")
+                        </p>
+                    }
                 </div>
 
                 <label>@Loc.T("Test-Rufzeichen", "Test Callsign", "Nominativo di test", "Indicativo de prueba")</label>
@@ -161,13 +204,101 @@
                 {
                     <span></span>
                     <div class="@(_autoReplyResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0">
-                        @_autoReplyResult
-                    </div>
-                }
-            </div>
-        </div>
+                                         @_autoReplyResult
+                                    </div>
+                                }
+                            </div>
+                        </div>
 
-        <!-- Bake / Beacon -->
+                        <!-- Bot-Befehle / Bot Commands -->
+                        <div class="settings-section">
+                            <h2 class="settings-section-title">🤖 Bot</h2>
+                            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                                ℹ️ @Loc.T(
+                                    "Eingehende Direkt-Nachrichten, die mit -- beginnen, werden als Befehle interpretiert. Eingebaut: --version, --time, --mh, --help.",
+                                    "Incoming direct messages starting with -- are interpreted as commands. Built-in: --version, --time, --mh, --help.",
+                                    "Messaggi diretti con -- vengono interpretati come comandi. Integrati: --version, --time, --mh, --help.",
+                                    "Los mensajes directos que comienzan con -- se interpretan como comandos. Integrados: --version, --time, --mh, --help.")
+                            </div>
+                            <div class="settings-grid">
+                                <label>@Loc.T("Bot aktiv", "Bot Active", "Bot attivo", "Bot activo")</label>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" @bind="_model.BotEnabled" />
+                                    <span>@(_model.BotEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                                </label>
+                            </div>
+
+                            <div style="margin-top:1rem">
+                                <h3 style="font-size:1rem;margin-bottom:0.25rem">@Loc.T("Eigene Befehle", "Custom Commands", "Comandi personalizzati", "Comandos personalizados")</h3>
+                                <p style="margin:0 0 0.5rem"><small>@Loc.T(
+                                    "Name: Befehlsname ohne -- (z.\u00a0B. info). Antwort: Text oder {Variablen}. Beschreibung: erscheint in --help.",
+                                    "Name: command name without -- (e.\u00a0g. info). Response: text or {variables}. Description: shown in --help.",
+                                    "Nome: senza -- (es. info). Risposta: testo o {variabili}. Descrizione: mostrata in --help.",
+                                    "Nombre: sin -- (p.ej. info). Respuesta: texto o {variables}. Descripción: aparece en --help.")</small>
+                                </p>
+                                <table class="telemetry-mapping-table">
+                                    <thead>
+                                        <tr>
+                                            <th>@Loc.T("Name (--…)", "Name (--…)", "Nome (--…)", "Nombre (--…)")</th>
+                                            <th>@Loc.T("Antwort", "Response", "Risposta", "Respuesta")</th>
+                                            <th>@Loc.T("Beschreibung (--help)", "Description (--help)", "Descrizione (--help)", "Descripción (--help)")</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var cmd in _model.BotCommands)
+                                        {
+                                            <tr>
+                                                <td><input type="text" @bind="cmd.Name" placeholder="info" style="width:100%;font-family:monospace" /></td>
+                                                <td><input type="text" @bind="cmd.Response" placeholder="QTH: Wien, 73 de {mycall}" style="width:100%" /></td>
+                                                <td><input type="text" @bind="cmd.Description" placeholder="@Loc.T("Stationsinfo", "Station info", "Info stazione", "Info estación")" style="width:100%" /></td>
+                                                <td><button type="button" class="btn-remove" @onclick="() => _model.BotCommands.Remove(cmd)">✕</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                                    <button type="button" class="btn-add"
+                                            @onclick="() => _model.BotCommands.Add(new BotCommandEntry())">
+                                        + @Loc.T("Befehl hinzufügen", "Add Command", "Aggiungi comando", "Añadir comando")
+                                    </button>
+                                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
+                                            @onclick="() => _showBotVars = !_showBotVars">
+                                        📋 @(_showBotVars
+                                            ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
+                                            : Loc.T("Variablen anzeigen", "Show Variables", "Mostra variabili", "Mostrar variables"))
+                                    </button>
+                                </div>
+                                @if (_showBotVars)
+                                {
+                                    var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
+                                    var now = DateTime.Now;
+                                    <table class="telemetry-mapping-table" style="margin-top:0.5rem;font-size:12px">
+                                        <thead>
+                                            <tr>
+                                                <th>@Loc.T("Variable", "Variable", "Variabile", "Variable")</th>
+                                                <th>@Loc.T("Bedeutung", "Meaning", "Significato", "Significado")</th>
+                                                <th>@Loc.T("Beispiel", "Example", "Esempio", "Ejemplo")</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version",       "Versione app",         "Versión app")</td>       <td style="font-family:monospace">@ver</td></tr>
+                                            <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",     "Own callsign",      "Nominativo proprio",   "Indicativo propio")</td> <td style="font-family:monospace">@_model.MyCallsign</td></tr>
+                                            <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen",  "Caller's callsign", "Nominativo chiamante", "Indicativo llamante")</td><td style="font-family:monospace">OE1KBC-1</td></tr>
+                                            <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",             "RSSI (dBm)",        "RSSI (dBm)",           "RSSI (dBm)")</td>        <td style="font-family:monospace">-85</td></tr>
+                                            <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",               "SNR (dB)",          "SNR (dB)",             "SNR (dB)")</td>          <td style="font-family:monospace">9.5</td></tr>
+                                            <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",          "Hardware name",     "Nome hardware",        "Nombre hardware")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
+                                            <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad",             "Relay path",        "Percorso relay",       "Ruta relay")</td>        <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
+                                            <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops",      "Relay hop count",   "Numero hop relay",     "Número saltos")</td>     <td style="font-family:monospace">1</td></tr>
+                                            <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",        "Current date",      "Data corrente",        "Fecha actual")</td>      <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
+                                            <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",       "Current time",      "Ora corrente",         "Hora actual")</td>       <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                                        </tbody>
+                                    </table>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Bake / Beacon -->
         <div class="settings-section">
             <h2 class="settings-section-title">📡 @Loc.T("Bake (Beacon)", "Beacon", "Beacon", "Baliza")</h2>
             <div class="settings-grid">
@@ -619,6 +750,8 @@
     private string  _autoReplyTestCallsign = string.Empty;
     private bool    _autoReplySending;
     private string? _autoReplyResult;
+    private bool    _showAutoReplyVars;
+    private bool    _showBotVars;
     private bool    _beaconSending;
     private string? _beaconResult;
 
@@ -903,6 +1036,10 @@
             TimeOffsetHours     = s.TimeOffsetHours,
             AutoReplyEnabled    = s.AutoReplyEnabled,
             AutoReplyText       = s.AutoReplyText,
+            BotEnabled          = s.BotEnabled,
+            BotCommands         = s.BotCommands
+                .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
+                .ToList(),
             BeaconEnabled       = s.BeaconEnabled,
             BeaconGroup         = s.BeaconGroup,
             BeaconText          = s.BeaconText,
@@ -914,10 +1051,11 @@
             TelemetryMapping       = s.TelemetryMapping
                 .Select(m => new TelemetryMappingEntry
                 {
-                    JsonKey  = m.JsonKey,
-                    Label    = m.Label,
-                    Unit     = m.Unit,
-                    Decimals = m.Decimals
+                    JsonKey     = m.JsonKey,
+                    Label       = m.Label,
+                    Unit        = m.Unit,
+                    Decimals    = m.Decimals,
+                    WeatherRole = m.WeatherRole
                 })
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
@@ -978,6 +1116,8 @@
         public double TimeOffsetHours     { get; set; } = 0;
         public bool   AutoReplyEnabled    { get; set; }
         public string AutoReplyText       { get; set; } = string.Empty;
+        public bool   BotEnabled          { get; set; }
+        public List<BotCommandEntry> BotCommands { get; set; } = [];
         public bool   BeaconEnabled       { get; set; }
         public string BeaconGroup         { get; set; } = string.Empty;
         public string BeaconText          { get; set; } = string.Empty;
@@ -1046,6 +1186,8 @@
             TimeOffsetHours     = TimeOffsetHours,
             AutoReplyEnabled    = AutoReplyEnabled,
             AutoReplyText       = AutoReplyText,
+            BotEnabled          = BotEnabled,
+            BotCommands         = BotCommands,
             BeaconEnabled       = BeaconEnabled,
             BeaconGroup         = BeaconGroup,
             BeaconText          = BeaconText,

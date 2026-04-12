@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Helpers;
 using MeshcomWebDesk.Models;
+using MeshcomWebDesk.Services.Bot;
 
 namespace MeshcomWebDesk.Services;
 
@@ -22,6 +23,8 @@ public partial class MeshcomUdpService : BackgroundService
 {
     private readonly ILogger<MeshcomUdpService> _logger;
     private readonly ChatService _chatService;
+    private readonly QrzService  _qrzService;
+    private readonly BotCommandService _botCommandService;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
@@ -58,11 +61,15 @@ public partial class MeshcomUdpService : BackgroundService
     public MeshcomUdpService(
         ILogger<MeshcomUdpService> logger,
         IOptionsMonitor<MeshcomSettings> settings,
-        ChatService chatService)
+        ChatService chatService,
+        QrzService qrzService,
+        BotCommandService botCommandService)
     {
-        _logger      = logger;
-        _chatService = chatService;
-        _settings    = settings.CurrentValue;
+        _logger             = logger;
+        _chatService        = chatService;
+        _qrzService         = qrzService;
+        _botCommandService  = botCommandService;
+        _settings           = settings.CurrentValue;
         settings.OnChange(s =>
         {
             _settings = s;
@@ -70,7 +77,7 @@ public partial class MeshcomUdpService : BackgroundService
         });
 
         _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
-        _chatService.OnNewDirectTab += callsign => _ = SendDh1frGreetingAsync(callsign);
+        _chatService.OnBotCommand   += msg      => _ = HandleBotCommandAsync(msg);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -260,24 +267,111 @@ public partial class MeshcomUdpService : BackgroundService
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
             return Task.CompletedTask;
 
-        var text = _settings.AutoReplyText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
+        var text = ExpandVariables(_settings.AutoReplyText, callsign);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         return SendMessageAsync(callsign, text);
     }
 
-    /// <summary>
-    /// Sends a one-time greeting with the running version whenever a new tab
-    /// for the callsign DH1FR-2 is opened by an <b>incoming</b> message.
-    /// Not triggered when the user opens the tab manually.
-    /// </summary>
-    private Task SendDh1frGreetingAsync(string callsign)
+    private async Task HandleBotCommandAsync(MeshcomMessage message)
     {
-        if (!callsign.Equals("DH1FR-2", StringComparison.OrdinalIgnoreCase))
-            return Task.CompletedTask;
+        try
+        {
+            _logger.LogDebug("Bot command received from {From}: {Text}", message.From, message.Text);
+            if (!_settings.BotEnabled)
+            {
+                _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
+                return;
+            }
 
-        var text = $"Hallo Ralf, hier läuft MeshCom WebDesk V{AppVersion}";
-        _logger.LogInformation("Sending DH1FR greeting to {Callsign}: {Text}", callsign, text);
-        return SendMessageAsync(callsign, text);
+            var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
+            reply = ExpandVariables(reply, message.From);
+
+            var parts = SplitMessage(reply);
+            _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
+                message.From, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
+
+            for (var i = 0; i < parts.Count; i++)
+            {
+                await SendMessageAsync(message.From, parts[i]);
+                if (i < parts.Count - 1)
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling bot command from {From}: {Text}", message.From, message.Text);
+        }
+    }
+
+    /// <summary>
+    /// Splits a message into chunks that fit within the MeshCom 149-character wire limit.
+    /// Splits preferentially at the last space or comma within the limit to avoid cutting words.
+    /// Falls back to a hard split only when no word boundary is found.
+    /// </summary>
+    private static IReadOnlyList<string> SplitMessage(string text, int maxLen = 149)
+    {
+        if (text.Length <= maxLen)
+            return [text];
+
+        var parts = new List<string>();
+        var span  = text.AsSpan();
+
+        while (!span.IsEmpty)
+        {
+            if (span.Length <= maxLen)
+            {
+                parts.Add(span.ToString());
+                break;
+            }
+
+            var slice   = span[..maxLen];
+            var splitAt = slice.LastIndexOf(' ');
+            if (splitAt <= 0) splitAt = slice.LastIndexOf(',');
+            if (splitAt <= 0) splitAt = maxLen;   // hard split as last resort
+
+            parts.Add(span[..splitAt].TrimEnd().ToString());
+            span = splitAt < maxLen
+                ? span[(splitAt + 1)..].TrimStart(' ')
+                : span[splitAt..];
+        }
+
+        return parts;
+    }
+
+    /// <summary>
+    /// Substitutes all supported template variables in <paramref name="template"/>.
+    /// When <paramref name="callsign"/> is provided, caller-specific variables are resolved.
+    /// Variables with no value available are replaced with an empty string.
+    /// </summary>
+    private string ExpandVariables(string template, string? callsign = null)
+    {
+        var now     = DateTime.Now;
+        var station = callsign != null
+            ? _chatService.MhList.FirstOrDefault(s =>
+                string.Equals(s.Callsign, callsign, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        QrzInfo? qrz = null;
+        if (callsign != null && _settings.Qrz.Enabled)
+            _qrzService.TryGetCached(callsign, out qrz);
+
+        var route = station?.LastRelayPath != null
+            ? string.Join(" \u2192 ", station.LastRelayPath.Split(',').Select(h => h.Trim()))
+            : string.Empty;
+
+        return template
+            .Replace("{version}",   AppVersion,                                        StringComparison.OrdinalIgnoreCase)
+            .Replace("{mycall}",    _settings.MyCallsign,                              StringComparison.OrdinalIgnoreCase)
+            .Replace("{callsign}",  callsign              ?? string.Empty,             StringComparison.OrdinalIgnoreCase)
+            .Replace("{dest-name}", qrz?.FirstName        ?? string.Empty,             StringComparison.OrdinalIgnoreCase)
+            .Replace("{dest-loc}",  qrz?.Location         ?? string.Empty,             StringComparison.OrdinalIgnoreCase)
+            .Replace("{rssi}",      station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{snr}",       station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{hw}",        MeshcomLookup.HwName(station?.HwId),               StringComparison.OrdinalIgnoreCase)
+            .Replace("{route}",     route,                                             StringComparison.OrdinalIgnoreCase)
+            .Replace("{hops}",      station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{date}",      now.ToString("dd.MM.yyyy"),                        StringComparison.OrdinalIgnoreCase)
+            .Replace("{time}",      now.ToString("HH:mm"),                             StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -323,9 +417,15 @@ public partial class MeshcomUdpService : BackgroundService
                 continue;
 
             var destination = s.BeaconGroup.TrimStart('#');
-            var beaconText  = s.BeaconText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
-            _logger.LogInformation("Sending beacon to {Group}", s.BeaconGroup);
-            await SendMessageAsync(destination, beaconText, s.BeaconGroup);
+            var beaconText  = ExpandVariables(s.BeaconText);
+            var parts       = SplitMessage(beaconText);
+            _logger.LogInformation("Sending beacon to {Group} ({Parts} part(s))", s.BeaconGroup, parts.Count);
+            for (var i = 0; i < parts.Count; i++)
+            {
+                await SendMessageAsync(destination, parts[i], s.BeaconGroup);
+                if (i < parts.Count - 1)
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+            }
             lastSent = DateTime.Now;
             SetBeaconStatus(true, lastSent + interval);
         }
@@ -419,7 +519,7 @@ public partial class MeshcomUdpService : BackgroundService
     /// Immediately sends the configured beacon to <see cref="MeshcomSettings.BeaconGroup"/>.
     /// Used by the Settings UI to test the beacon without waiting for the interval.
     /// </summary>
-    public Task SendBeaconNowAsync()
+    public async Task SendBeaconNowAsync()
     {
         var s = _settings;
         if (string.IsNullOrWhiteSpace(s.BeaconGroup))
@@ -428,9 +528,15 @@ public partial class MeshcomUdpService : BackgroundService
             throw new InvalidOperationException("Kein Bakentext konfiguriert.");
 
         var destination = s.BeaconGroup.TrimStart('#');
-        var beaconText  = s.BeaconText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
-        _logger.LogInformation("Beacon test send to {Group}: {Text}", s.BeaconGroup, beaconText);
-        return SendMessageAsync(destination, beaconText, s.BeaconGroup);
+        var beaconText  = ExpandVariables(s.BeaconText);
+        var parts       = SplitMessage(beaconText);
+        _logger.LogInformation("Beacon test send to {Group} ({Parts} part(s)): {Text}", s.BeaconGroup, parts.Count, beaconText);
+        for (var i = 0; i < parts.Count; i++)
+        {
+            await SendMessageAsync(destination, parts[i], s.BeaconGroup);
+            if (i < parts.Count - 1)
+                await Task.Delay(TimeSpan.FromSeconds(2));
+        }
     }
 
     /// <summary>
@@ -444,7 +550,7 @@ public partial class MeshcomUdpService : BackgroundService
         if (string.IsNullOrWhiteSpace(_settings.AutoReplyText))
             throw new InvalidOperationException("Kein Auto-Reply Text konfiguriert.");
 
-        var text = _settings.AutoReplyText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
+        var text = ExpandVariables(_settings.AutoReplyText, callsign);
         _logger.LogInformation("Auto-reply test send to {Callsign}: {Text}", callsign, text);
         return SendMessageAsync(callsign, text);
     }

@@ -44,8 +44,16 @@ public class SettingsService
                 ["GroupFilterEnabled"]  = s.GroupFilterEnabled,
                 ["Groups"]              = new JsonArray(s.Groups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["DataPath"]            = s.DataPath,
+                ["TimeOffsetHours"]     = s.TimeOffsetHours,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
+                ["BotEnabled"]         = s.BotEnabled,
+                ["BotCommands"]        = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
+                {
+                    ["Name"]        = c.Name,
+                    ["Response"]    = c.Response,
+                    ["Description"] = c.Description
+                }).ToArray()),
                 ["BeaconEnabled"]       = s.BeaconEnabled,
                 ["BeaconGroup"]         = s.BeaconGroup,
                 ["BeaconText"]          = s.BeaconText,
@@ -56,10 +64,11 @@ public class SettingsService
                 ["TelemetryScheduleHours"] = s.TelemetryScheduleHours,
                 ["TelemetryMapping"]       = new JsonArray(s.TelemetryMapping.Select(m => (JsonNode?)new JsonObject
                 {
-                    ["JsonKey"]  = m.JsonKey,
-                    ["Label"]    = m.Label,
-                    ["Unit"]     = m.Unit,
-                    ["Decimals"] = m.Decimals
+                    ["JsonKey"]     = m.JsonKey,
+                    ["Label"]       = m.Label,
+                    ["Unit"]        = m.Unit,
+                    ["Decimals"]    = m.Decimals,
+                    ["WeatherRole"] = m.WeatherRole
                 }).ToArray()),
                 ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
                 ["TelemetryApiKey"]     = s.TelemetryApiKey,
