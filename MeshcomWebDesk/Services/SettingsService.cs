@@ -46,6 +46,13 @@ public class SettingsService
                 ["DataPath"]            = s.DataPath,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
+                ["BotEnabled"]         = s.BotEnabled,
+                ["BotCommands"]        = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
+                {
+                    ["Name"]        = c.Name,
+                    ["Response"]    = c.Response,
+                    ["Description"] = c.Description
+                }).ToArray()),
                 ["BeaconEnabled"]       = s.BeaconEnabled,
                 ["BeaconGroup"]         = s.BeaconGroup,
                 ["BeaconText"]          = s.BeaconText,
