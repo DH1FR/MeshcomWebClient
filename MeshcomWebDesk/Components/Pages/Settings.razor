@@ -82,14 +82,7 @@
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
 
                 <label>
-                    @Loc.T("UDP-Traffic loggen", "Log UDP Traffic", "Registra traffico UDP", "Registrar tráfico UDP")<br />
-                    <small style="color:#e3b341">
-                        ⚠️ @Loc.T(
-                            "Rufzeichen, Nachrichtentexte und GPS-Koordinaten aller UDP-Pakete werden in die Log-Datei geschrieben. Datenschutz beachten.",
-                            "Callsigns, message texts and GPS coordinates of all UDP packets are written to the log file. Consider privacy implications.",
-                            "Nominativi, testi e coordinate GPS vengono scritti nel log. Considerare la privacy.",
-                            "Los indicativos, textos y coordenadas GPS se escriben en el log. Considerar la privacidad.")
-                    </small>
+                    @Loc.T("UDP-Traffic loggen", "Log UDP Traffic", "Registra traffico UDP", "Registrar tráfico UDP")
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.LogUdpTraffic" />
@@ -424,14 +417,7 @@
                 @if (_model.DbProvider != DatabaseSettings.ProviderNone)
                 {
                     <label>
-                        @Loc.T("DB-Inserts loggen", "Log DB Inserts", "Log insert DB", "Registrar inserts DB")<br />
-                        <small style="color:#e3b341">
-                            ⚠️ @Loc.T(
-                                "Rufzeichen und Nachrichtentexte werden in die Log-Datei geschrieben. Datenschutz beachten.",
-                                "Callsigns and message texts are written to the log file. Consider privacy implications.",
-                                "Nominativi e testi vengono scritti nel log. Considerare la privacy.",
-                                "Los indicativos y textos se escriben en el log. Considerar la privacidad.")
-                        </small>
+                        @Loc.T("DB-Inserts loggen", "Log DB Inserts", "Log insert DB", "Registrar inserts DB")
                     </label>
                     <label class="settings-toggle">
                         <input type="checkbox" @bind="_model.DbLogInserts" />
