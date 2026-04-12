@@ -151,8 +151,6 @@ public class ChatService
 
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
-        NotifyChange();
-        _ = _webhook.SendAsync(message, "message");
     }
 
     /// <summary>
