@@ -914,10 +914,11 @@
             TelemetryMapping       = s.TelemetryMapping
                 .Select(m => new TelemetryMappingEntry
                 {
-                    JsonKey  = m.JsonKey,
-                    Label    = m.Label,
-                    Unit     = m.Unit,
-                    Decimals = m.Decimals
+                    JsonKey     = m.JsonKey,
+                    Label       = m.Label,
+                    Unit        = m.Unit,
+                    Decimals    = m.Decimals,
+                    WeatherRole = m.WeatherRole
                 })
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,

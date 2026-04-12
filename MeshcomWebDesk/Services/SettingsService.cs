@@ -56,10 +56,11 @@ public class SettingsService
                 ["TelemetryScheduleHours"] = s.TelemetryScheduleHours,
                 ["TelemetryMapping"]       = new JsonArray(s.TelemetryMapping.Select(m => (JsonNode?)new JsonObject
                 {
-                    ["JsonKey"]  = m.JsonKey,
-                    ["Label"]    = m.Label,
-                    ["Unit"]     = m.Unit,
-                    ["Decimals"] = m.Decimals
+                    ["JsonKey"]     = m.JsonKey,
+                    ["Label"]       = m.Label,
+                    ["Unit"]        = m.Unit,
+                    ["Decimals"]    = m.Decimals,
+                    ["WeatherRole"] = m.WeatherRole
                 }).ToArray()),
                 ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
                 ["TelemetryApiKey"]     = s.TelemetryApiKey,
