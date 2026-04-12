@@ -57,11 +57,17 @@ window.meshcomChat = (function () {
 
     return {
         initResizer,
-        getActiveTab: () => localStorage.getItem('meshcom-active-tab') || '',
-        setActiveTab: (key) => {
+        getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
+        setActiveTab:      (key) => {
             if (key) localStorage.setItem('meshcom-active-tab', key);
             else     localStorage.removeItem('meshcom-active-tab');
-        }
+        },
+        getMonitorVisible: () => {
+            var v = localStorage.getItem('meshcom-monitor-visible');
+            return v === null ? null : v === '1';
+        },
+        setMonitorVisible: (visible) =>
+            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0')
     };
 }());
 

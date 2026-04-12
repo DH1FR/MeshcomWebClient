@@ -108,7 +108,7 @@
         <div class="pane-header">
             <span>📡 Monitor</span>
             <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries", "Voci", "Entradas")</span>
-            <button class="mon-toggle-btn" @onclick="() => _showMonitor = !_showMonitor"
+            <button class="mon-toggle-btn" @onclick="ToggleMonitorAsync"
                     title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor", "Nascondi monitor", "Ocultar monitor") : Loc.T("Monitor einblenden", "Show Monitor", "Mostra monitor", "Mostrar monitor"))">
                 @(_showMonitor ? "▼" : "▲")
             </button>
@@ -360,6 +360,18 @@
             try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
             catch (JSException) { }
 
+            // Restore monitor visibility (collapsed/expanded) from previous session
+            try
+            {
+                var monVis = await JS.InvokeAsync<bool?>("meshcomChat.getMonitorVisible");
+                if (monVis.HasValue && monVis.Value != _showMonitor)
+                {
+                    _showMonitor = monVis.Value;
+                    StateHasChanged();
+                }
+            }
+            catch (JSException) { }
+
             // Fallback restore for hard browser reload: ChatService.ActiveTabKey is empty in that case.
             // On normal navigation (Map → Chat) this is a no-op because OnInitialized already
             // read the correct key from ChatService.ActiveTabKey.
@@ -478,6 +490,13 @@
                 _playSound = true;
             _lastNotificationTime = latestDirect.Timestamp;
         }
+    }
+
+    private async Task ToggleMonitorAsync()
+    {
+        _showMonitor = !_showMonitor;
+        try { await JS.InvokeVoidAsync("meshcomChat.setMonitorVisible", _showMonitor); }
+        catch (JSException) { }
     }
 
     private void SelectTab(string key)
