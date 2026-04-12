@@ -138,7 +138,10 @@ public class ChatService
         // hardware data from this message are available to ExpandVariables immediately.
         UpdateMhList(message);
 
-        ChatTab? tab = tabAllowed ? GetOrCreateTab(tabKey, triggerAutoReply: true) : null;
+        ChatTab? tab = null;
+        bool wasNewDirect = false;
+        if (tabAllowed)
+            tab = GetOrCreateTab(tabKey, out wasNewDirect);
         lock (_lock)
         {
             AppendToMonitor(message);
@@ -148,6 +151,11 @@ public class ChatService
                 tab.UnreadCount++;
             }
         }
+
+        // Fire OnNewDirectTab AFTER the incoming message is in the tab so the auto-reply
+        // (AddOutgoingMessage) appears after it in the conversation, not before.
+        if (wasNewDirect)
+            OnNewDirectTab?.Invoke(message.From);
 
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
@@ -500,7 +508,7 @@ public class ChatService
         _ = _sink.WriteAsync(message);
     }
 
-    private ChatTab GetOrCreateTab(string key, bool triggerAutoReply = false)
+    private ChatTab GetOrCreateTab(string key, out bool wasNewDirect)
     {
         var newTab = new ChatTab
         {
@@ -513,18 +521,17 @@ public class ChatService
             }
         };
 
-        var tab    = _tabs.GetOrAdd(key, newTab);
-        bool wasNew = ReferenceEquals(tab, newTab);
+        var tab = _tabs.GetOrAdd(key, newTab);
+        wasNewDirect = ReferenceEquals(tab, newTab) && key != "*" && !key.StartsWith('#');
 
-        if (wasNew && key != "*" && !key.StartsWith('#'))
-        {
+        if (wasNewDirect)
             OnNewTab?.Invoke(key);
-            if (triggerAutoReply)
-                OnNewDirectTab?.Invoke(key);
-        }
 
         return tab;
     }
+
+    // Convenience overload for callers that don't need the wasNewDirect flag.
+    private ChatTab GetOrCreateTab(string key) => GetOrCreateTab(key, out _);
 
     private void NotifyChange()
     {
