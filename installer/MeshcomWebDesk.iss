@@ -9,7 +9,7 @@
 #define AppName      "MeshcomWebDesk"
 ; AppVersion can be overridden from the command line: ISCC /DAppVersion=1.2.3 MeshcomWebDesk.iss
 #ifndef AppVersion
-  #define AppVersion "1.7.1"
+  #define AppVersion "1.7.2"
 #endif
 #define AppPublisher "DH1FR"
 #define AppURL       "https://github.com/DH1FR/MeshcomWebDesk"
