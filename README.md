@@ -132,7 +132,8 @@ and makes a full web client for MeshCom available via a simple URL
 - Changes are written to `appsettings.override.json` in `DataPath` (Docker-safe read-only mount supported)
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
-- **Collapsible sections** – all 13 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state persists during the session
+- **Collapsible sections** – all 13 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
+- **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
 
 ### 🌐 UI Language
 - Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
@@ -179,7 +180,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Configurable callsign list** – specify any number of callsigns to watch
 - **Flexible matching**: entry *without* SSID (e.g. `DH1FR`) matches all SSIDs (`DH1FR`, `DH1FR-1`, `DH1FR-11`, …); entry *with* SSID (e.g. `DH1FR-1`) matches only that exact callsign
 - **Alert tone** 🔔 (ascending three-tone beep, distinct from the normal message beep) when a watched callsign is heard
-- **Toast notification** in the top-right corner showing the callsign, packet type badge (`MSG` / `POS` / `TEL` / `ACK`) and relative age; auto-dismisses after 30 s; multiple hits are stacked in the same toast
+- **Toast notification** in the top-right corner showing the callsign, packet type badge (`MSG` / `POS` / `TEL` / `ACK`) and relative age; **configurable auto-dismiss** (default 5 min, adjustable in Settings); multiple hits are stacked in the same toast; manual close button ✕
 - **Per-type filter** – independently enable/disable alerts for: chat messages (MSG), position beacons (POS), telemetry (TEL, default **off** to avoid noise from periodic data), and ACKs (ACK, default off)
 - Respects the global 🔕 mute toggle in the status bar – no sound when muted
 - Configured in **Settings → 📻 Watchlist**; changes apply **live without restart**
@@ -372,6 +373,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "WatchOnPosition":    true,            // alert on position beacons
   "WatchOnTelemetry":   false,           // alert on telemetry packets (periodic – off by default)
   "WatchOnAck":         false,           // alert on ACK packets
+  "WatchAlertMinutes":  5,              // watchlist toast auto-dismiss in minutes (min 1)
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
   "AutoReplyText":      "...",           // auto-reply text; {version} → app version
@@ -410,7 +412,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "Qrz": {
     "Enabled":  false,                 // enable QRZ.com XML API callsign lookups
     "Username": "",                    // QRZ.com login username (usually your callsign)
-    "Password": ""                     // QRZ.com login password
+    "Password": ""                     // QRZ.com login password (stored encrypted after first UI save)
   },
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
@@ -1002,6 +1004,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.8.1
+- **feat:** 🔐 **Encrypted sensitive settings** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are now encrypted in `appsettings.override.json` using the ASP.NET Core Data Protection API (`dp:` prefix); `IPostConfigureOptions<MeshcomSettings>` decrypts them transparently on load; plain-text values in existing files pass through unchanged (backward compatible); keys stored in `DataPath/keys`
+- **feat:** ⚙️ **Settings – collapsible section state persisted** – expanded/collapsed state of all 13 sections is saved to `localStorage` (`meshcom-settings-sections`) and restored on every visit; was previously reset on every page navigation
+- **feat:** 📻 **Watchlist – configurable toast duration** – new `WatchAlertMinutes` setting (default 5, min 1) controls how long the watchlist toast stays visible before auto-dismissing; configurable in **Settings → 📻 Watchlist**
 
 ### v1.8.0
 - **feat:** 📻 **Watchlist – callsign alert system** – configurable list of callsigns to watch; matching supports base-callsign wildcards (`DH1FR` matches all SSIDs) or exact SSID matching (`DH1FR-1`); triggers an ascending three-tone alert beep (distinct from the message beep) and a self-dismissing toast notification in the UI; per-type filters for MSG / POS / TEL / ACK; telemetry alerts off by default to avoid noise from periodic packets; respects the global mute toggle
