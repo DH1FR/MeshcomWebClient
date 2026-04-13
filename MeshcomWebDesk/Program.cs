@@ -12,6 +12,11 @@ using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// When running as a Windows Service the working directory defaults to System32.
+// Set it to the executable's directory so relative paths (logs/, data/) resolve correctly.
+Environment.CurrentDirectory = AppContext.BaseDirectory;
+builder.Host.UseWindowsService(options => options.ServiceName = "MeshcomWebDesk");
+
 // ── Banner ────────────────────────────────────────────────────────────────────
 var bannerVersion = System.Reflection.Assembly.GetExecutingAssembly()
     .GetName().Version?.ToString(3) ?? "?";

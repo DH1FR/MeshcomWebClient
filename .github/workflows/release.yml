@@ -96,3 +96,53 @@ jobs:
             MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz
           generate_release_notes: true
+
+  windows-installer:
+    name: Windows Installer
+    runs-on: windows-latest
+    needs: release   # wait until the release exists before uploading to it
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Parse version
+        id: version
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}" -replace '^v', ''
+          echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Publish self-contained win-x64
+        shell: pwsh
+        run: |
+          dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:AssemblyVersion=${{ steps.version.outputs.VERSION }}.0 `
+            -p:FileVersion=${{ steps.version.outputs.VERSION }}.0 `
+            --output installer/publish/win-x64
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc /DAppVersion=${{ steps.version.outputs.VERSION }} installer\MeshcomWebDesk.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload installer to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/output/MeshcomWebDesk-Setup-${{ steps.version.outputs.VERSION }}-win-x64.exe
