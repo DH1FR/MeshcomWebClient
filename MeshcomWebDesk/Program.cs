@@ -73,6 +73,10 @@ builder.Host.UseSerilog((context, config) => config
 
 // Bind MeshCom settings from configuration
 builder.Services.Configure<MeshcomSettings>(meshcomSection);
+// Decrypt sensitive fields (connection strings, tokens, passwords) after loading.
+// Values encrypted by SettingsService carry a "dp:" prefix; plain-text values pass through.
+builder.Services.AddSingleton<IPostConfigureOptions<MeshcomSettings>,
+                               DecryptMeshcomSettingsPostConfigure>();
 
 // Persist Data Protection keys to disk so antiforgery tokens survive container restarts.
 // Docker: override via DATAPROTECTION_KEYPATH env variable (e.g. /app/keys).

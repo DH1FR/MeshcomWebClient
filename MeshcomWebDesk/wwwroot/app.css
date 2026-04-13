@@ -1197,6 +1197,9 @@ h1:focus {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    justify-content: space-between;
 }
 
 .settings-help-banner {
@@ -1488,6 +1491,68 @@ h1:focus {
     border-color: #4a9aff;
 }
 
+.map-ctrl-sep {
+    width: 1px;
+    background: #1a4a8a;
+    margin: 2px 4px;
+    align-self: stretch;
+}
+
+.map-search-input {
+    background: #0a1628;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    width: 130px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.map-search-input::placeholder { color: #3a5a7a; }
+.map-search-input:focus { border-color: #4a9aff; }
+
+.map-search-notfound {
+    color: #ff6b6b;
+    font-size: 12px;
+    align-self: center;
+}
+
+/* Search wrapper: relative so the results dropdown is positioned below */
+.map-search-wrap-ctrl {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.map-search-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: #0d1117;
+    border: 1px solid #1a4a8a;
+    border-radius: 4px;
+    min-width: 160px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 2000;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+
+.map-search-result-item {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    color: #a0c4ff;
+    cursor: pointer;
+    border-bottom: 1px solid #21262d;
+    white-space: nowrap;
+}
+.map-search-result-item:last-child { border-bottom: none; }
+.map-search-result-item:hover { background: #1a4a8a; color: #fff; }
+
 .map-container {
     flex: 1;
     min-height: 0;
@@ -1711,6 +1776,93 @@ h1:focus {
 }
 
 .map-info-sep { color: #3a3a5e; }
+.settings-section-collapsed > div,
+.settings-section-collapsed > a {
+    display: none;
+}
+
+.section-chevron {
+    font-size: 10px;
+    color: #8b949e;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-left: 4px;
+}
+
 .rssi-good    { color: #3fb950; }
 .rssi-ok      { color: #e3b341; }
 .rssi-weak    { color: #f85149; }
+
+/* ===== Watchlist Toast ===== */
+.watchlist-toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    background: #16213e;
+    border: 1px solid #e3b341;
+    border-radius: 8px;
+    min-width: 210px;
+    max-width: 300px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+    animation: watchlist-toast-in 0.2s ease;
+}
+
+@keyframes watchlist-toast-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.watchlist-toast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #1a1a4e;
+    border-radius: 8px 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e3b341;
+}
+
+.watchlist-toast-close {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.watchlist-toast-close:hover { color: #ff3333; }
+
+.watchlist-toast-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-top: 1px solid #0f3460;
+    font-size: 13px;
+}
+
+.watchlist-callsign {
+    font-weight: 600;
+    flex: 1;
+    color: #7ee787;
+}
+
+.watchlist-badge {
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 5px;
+    background: #0f3460;
+    color: #a0c4ff;
+}
+
+.watchlist-age {
+    font-size: 11px;
+    color: #8b949e;
+    white-space: nowrap;
+}

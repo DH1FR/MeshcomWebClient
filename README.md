@@ -132,6 +132,8 @@ and makes a full web client for MeshCom available via a simple URL
 - Changes are written to `appsettings.override.json` in `DataPath` (Docker-safe read-only mount supported)
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
+- **Collapsible sections** – all 13 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
+- **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
 
 ### 🌐 UI Language
 - Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
@@ -174,6 +176,15 @@ and makes a full web client for MeshCom available via a simple URL
 - **Auto-split**: replies longer than 149 characters are automatically split into consecutive packets (2 s pause between parts) – same strategy as multi-bucket telemetry
 - Enabled / disabled via `BotEnabled` – applies **live without restart**
 
+### 📻 Watchlist – Callsign alert
+- **Configurable callsign list** – specify any number of callsigns to watch
+- **Flexible matching**: entry *without* SSID (e.g. `DH1FR`) matches all SSIDs (`DH1FR`, `DH1FR-1`, `DH1FR-11`, …); entry *with* SSID (e.g. `DH1FR-1`) matches only that exact callsign
+- **Alert tone** 🔔 (ascending three-tone beep, distinct from the normal message beep) when a watched callsign is heard
+- **Toast notification** in the top-right corner showing the callsign, packet type badge (`MSG` / `POS` / `TEL` / `ACK`) and relative age; **configurable auto-dismiss** (default 5 min, adjustable in Settings); multiple hits are stacked in the same toast; manual close button ✕
+- **Per-type filter** – independently enable/disable alerts for: chat messages (MSG), position beacons (POS), telemetry (TEL, default **off** to avoid noise from periodic data), and ACKs (ACK, default off)
+- Respects the global 🔕 mute toggle in the status bar – no sound when muted
+- Configured in **Settings → 📻 Watchlist**; changes apply **live without restart**
+
 ### 📊 Telemetry (Telemetrie-Sender)
 - **Periodic telemetry messages**
 - **Source-agnostic**: any system can write the JSON file – Home Assistant, Node-RED, MQTT bridge, shell script, etc.
@@ -211,7 +222,8 @@ and makes a full web client for MeshCom available via a simple URL
 - Interactive map at `/map` powered by **Leaflet.js + OpenStreetMap**
 - **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
 - **Own position** shown as gold diamond ◆ (APRS convention)
-- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude
+- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude, and a direct **🔗 aprs.fi link** (opens station info page in new tab)
+- **Callsign search** 🔍 – search field in the control bar; press Enter or click the button to jump directly to the station and open its popup; shows „Not found" if no match
 - **First open**: map automatically zooms to a **50 km radius** around own position (once own GPS is known)
 - **View persistence**: last map position and zoom level are saved in `localStorage` and restored on every subsequent visit
 - **Compact info bar** at the bottom: `📡 N Station(en) · 📍 MyCallsign` – clean one-liner regardless of station count
@@ -221,7 +233,7 @@ and makes a full web client for MeshCom available via a simple URL
 ### 🔗 Webhook
 - **HTTP POST** to a configurable URL on incoming events
 - Configurable **triggers**: chat messages / position beacons / telemetry (each individually)
-- **JSON payload**: `event`, `timestamp`, `from`, `to`, `text`, `rssi`, `snr`, `latitude`, `longitude`, `altitude`, `battery`, `firmware`, `relay_path`, `src_type`
+- **JSON payload**: `event`, `timestamp`, `from`, `to`, `text`, `rssi`, `snr`, `latitude`, `longitude`, `altitude`, `battery`, `firmware`, `relay_path`, `src_type`; telemetry events additionally include `temp1`, `temp2`, `humidity`, `pressure`; `null` fields are omitted
 - Fire-and-forget (10 s timeout); errors logged and swallowed – never blocks reception
 - Configured in **Settings → 🔗 Webhook**; changes apply **live without restart**
 - Compatible with **Home Assistant** webhooks, Node-RED, n8n, IFTTT, custom endpoints
@@ -356,6 +368,12 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "MonitorMaxMessages": 1000,            // max monitor history (oldest dropped)
   "GroupFilterEnabled": true,            // only show whitelisted group tabs
   "Groups":             ["#20","#262"],  // whitelisted groups (GroupFilterEnabled=true)
+  "WatchCallsigns":     ["DH1FR","OE1KBC-1"], // watched callsigns (without SSID = match all SSIDs)
+  "WatchOnMessage":     true,            // alert on chat messages from watched callsigns
+  "WatchOnPosition":    true,            // alert on position beacons
+  "WatchOnTelemetry":   false,           // alert on telemetry packets (periodic – off by default)
+  "WatchOnAck":         false,           // alert on ACK packets
+  "WatchAlertMinutes":  5,              // watchlist toast auto-dismiss in minutes (min 1)
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
   "AutoReplyText":      "...",           // auto-reply text; {version} → app version
@@ -394,7 +412,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "Qrz": {
     "Enabled":  false,                 // enable QRZ.com XML API callsign lookups
     "Username": "",                    // QRZ.com login username (usually your callsign)
-    "Password": ""                     // QRZ.com login password
+    "Password": ""                     // QRZ.com login password (stored encrypted after first UI save)
   },
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
@@ -986,6 +1004,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.7.1
+- **feat:** 🔐 **Encrypted sensitive settings** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are now encrypted in `appsettings.override.json` using the ASP.NET Core Data Protection API (`dp:` prefix); `IPostConfigureOptions<MeshcomSettings>` decrypts them transparently on load; plain-text values in existing files pass through unchanged (backward compatible); keys stored in `DataPath/keys`
+- **feat:** 📻 **Watchlist – callsign alert system** – configurable list of callsigns to watch; matching supports base-callsign wildcards (`DH1FR` matches all SSIDs) or exact SSID matching (`DH1FR-1`); triggers an ascending three-tone alert beep and a self-dismissing toast notification; per-type filters (MSG / POS / TEL / ACK); telemetry alerts off by default; respects the global mute toggle
+- **feat:** 📻 **Watchlist – configurable toast duration** – new `WatchAlertMinutes` setting (default 5, min 1) configurable in **Settings → 📻 Watchlist**
+- **feat:** ⚙️ **Settings – collapsible sections** – all 13 sections individually collapsible; all start collapsed by default; expanded/collapsed state saved to `localStorage` and restored on every visit
+- **feat:** 🔗 **Webhook – telemetry fields in payload** – `temp1`, `temp2`, `humidity`, `pressure` added to `eventType="telemetry"` payload
+- **fix:** ⚙️ **Settings – Watchlist persistence** – `WatchCallsigns` and `WatchOn*` flags were missing from `SettingsService`
 
 ### v1.7.0
 - **feat:** 🤖 **Bot command system** – incoming direct messages starting with `--` (or `—` em dash) are interpreted as bot commands; built-in: `--help`, `--version`, `--time`, `--mh`; fully configurable user-defined commands with `{variable}` placeholder support in **Settings → 🤖 Bot**; `IBotCommand` interface for developer extensions

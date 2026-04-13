@@ -728,13 +728,19 @@ public partial class MeshcomUdpService : BackgroundService
             Status.LastTxTime = DateTime.Now;
             NotifyStatusChange();
 
+            // The MeshCom firmware (extudp_functions.cpp / getExtern) NEVER sends an echo
+            // back to the EXTUDP client after queuing a message for LoRa TX.
+            // Therefore ⏳ → ✓ via node-echo is impossible for any message type.
+            // Mark all outgoing messages as "transmitted" immediately (✓).
+            // Direct messages may still reach ✓✓ when the recipient sends an APRS ACK.
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
-                From = _settings.MyCallsign,
-                To = tabKey ?? destination,
-                Text = text,
-                IsOutgoing = true,
-                RawData = json
+                From           = _settings.MyCallsign,
+                To             = tabKey ?? destination,
+                Text           = text,
+                IsOutgoing     = true,
+                RawData        = json,
+                SequenceNumber = "TX"
             });
         }
         catch (Exception ex)

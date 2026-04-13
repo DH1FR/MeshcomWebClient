@@ -8,6 +8,7 @@
 @inject LanguageService Loc
 @inject DatabaseSetupService DatabaseSetupService
 @inject QrzService QrzService
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -41,8 +42,8 @@
         }
 
         <!-- Verbindung / Connection -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">🔌 @Loc.T("Verbindung", "Connection", "Connessione", "Conexión")</h2>
+        <div class="settings-section @(IsOpen("conn") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("conn")'>🔌 @Loc.T("Verbindung", "Connection", "Connessione", "Conexión") <span class="section-chevron">@(IsOpen("conn") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>Listen IP</label>
                 <input type="text" @bind="_model.ListenIp" />
@@ -72,8 +73,8 @@
         </div>
 
         <!-- Logging -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">📝 Logging</h2>
+        <div class="settings-section @(IsOpen("log") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("log")'>📝 Logging <span class="section-chevron">@(IsOpen("log") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Log-Pfad", "Log Path", "Percorso Log", "Ruta de Log")</label>
                 <input type="text" @bind="_model.LogPath" />
@@ -92,8 +93,8 @@
         </div>
 
         <!-- Chat & Monitor -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">💬 Chat &amp; Monitor</h2>
+        <div class="settings-section @(IsOpen("chat") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("chat")'>💬 Chat &amp; Monitor <span class="section-chevron">@(IsOpen("chat") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)", "Limite monitor (voci)", "Límite monitor (entradas)")</label>
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
@@ -119,8 +120,8 @@
         </div>
 
         <!-- Datenspeicherung / Data Storage -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">💾 @Loc.T("Datenspeicherung", "Data Storage", "Archiviazione dati", "Almacenamiento de datos")</h2>
+        <div class="settings-section @(IsOpen("data") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("data")'>💾 @Loc.T("Datenspeicherung", "Data Storage", "Archiviazione dati", "Almacenamiento de datos") <span class="section-chevron">@(IsOpen("data") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Datenpfad", "Data Path", "Percorso dati", "Ruta de datos")</label>
                 <input type="text" @bind="_model.DataPath" />
@@ -128,8 +129,8 @@
         </div>
 
         <!-- Auto-Reply -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">↩️ Auto-Reply</h2>
+        <div class="settings-section @(IsOpen("autoreply") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("autoreply")'>↩️ Auto-Reply <span class="section-chevron">@(IsOpen("autoreply") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Auto-Reply aktiv", "Auto-Reply Active", "Auto-risposta attiva", "Auto-respuesta activa")</label>
                 <label class="settings-toggle">
@@ -211,8 +212,8 @@
                         </div>
 
                         <!-- Bot-Befehle / Bot Commands -->
-                        <div class="settings-section">
-                            <h2 class="settings-section-title">🤖 Bot</h2>
+                        <div class="settings-section @(IsOpen("bot") ? "" : "settings-section-collapsed")">
+                            <h2 class="settings-section-title" @onclick='() => Toggle("bot")'>🤖 Bot <span class="section-chevron">@(IsOpen("bot") ? "▲" : "▼")</span></h2>
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                                 ℹ️ @Loc.T(
                                     "Eingehende Direkt-Nachrichten, die mit -- beginnen, werden als Befehle interpretiert. Eingebaut: --version, --time, --mh, --help.",
@@ -284,8 +285,10 @@
                                         <tbody>
                                             <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version",       "Versione app",         "Versión app")</td>       <td style="font-family:monospace">@ver</td></tr>
                                             <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",     "Own callsign",      "Nominativo proprio",   "Indicativo propio")</td> <td style="font-family:monospace">@_model.MyCallsign</td></tr>
-                                            <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen",  "Caller's callsign", "Nominativo chiamante", "Indicativo llamante")</td><td style="font-family:monospace">OE1KBC-1</td></tr>
-                                            <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",             "RSSI (dBm)",        "RSSI (dBm)",           "RSSI (dBm)")</td>        <td style="font-family:monospace">-85</td></tr>
+                                            <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Anrufendes Rufzeichen",       "Caller's callsign",    "Nominativo chiamante",  "Indicativo llamante")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
+                                            <tr><td><code>{dest-name}</code></td><td>@Loc.T("Vorname (QRZ, Anrufer)",    "First name (QRZ, caller)", "Nome (QRZ, chiamante)", "Nombre (QRZ, llamante)")</td><td style="font-family:monospace">Max</td></tr>
+                                            <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("Standort (QRZ, Anrufer)",   "Location (QRZ, caller)",   "Luogo (QRZ, chiamante)","Lugar (QRZ, llamante)")</td> <td style="font-family:monospace">Wien</td></tr>
+                                            <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",                "RSSI (dBm)",               "RSSI (dBm)",            "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
                                             <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",               "SNR (dB)",          "SNR (dB)",             "SNR (dB)")</td>          <td style="font-family:monospace">9.5</td></tr>
                                             <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",          "Hardware name",     "Nome hardware",        "Nombre hardware")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
                                             <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad",             "Relay path",        "Percorso relay",       "Ruta relay")</td>        <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
@@ -299,8 +302,8 @@
                         </div>
 
                         <!-- Bake / Beacon -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">📡 @Loc.T("Bake (Beacon)", "Beacon", "Beacon", "Baliza")</h2>
+        <div class="settings-section @(IsOpen("beacon") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("beacon")'>📡 @Loc.T("Bake (Beacon)", "Beacon", "Beacon", "Baliza") <span class="section-chevron">@(IsOpen("beacon") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Bake aktiv", "Beacon Active", "Beacon attivo", "Baliza activa")</label>
                 <label class="settings-toggle">
@@ -344,8 +347,8 @@
         </div>
 
         <!-- Telemetrie / Telemetry -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">📊 @Loc.T("Telemetrie", "Telemetry", "Telemetria", "Telemetría")</h2>
+        <div class="settings-section @(IsOpen("tele") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("tele")'>📊 @Loc.T("Telemetrie", "Telemetry", "Telemetria", "Telemetría") <span class="section-chevron">@(IsOpen("tele") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Telemetrie aktiv", "Telemetry Active", "Telemetria attiva", "Telemetría activa")</label>
                 <label class="settings-toggle">
@@ -485,9 +488,59 @@
             </div>
         </div>
 
+        <!-- Watchlist -->
+        <div class="settings-section @(IsOpen("watch") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("watch")'>📻 @Loc.T("Watchlist", "Watchlist", "Watchlist", "Watchlist") <span class="section-chevron">@(IsOpen("watch") ? "▲" : "▼")</span></h2>
+            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                ℹ️ @Loc.T(
+                    "Wenn ein eingehendes Paket (Nachricht, Position oder Telemetrie) von einem dieser Rufzeichen empfangen wird, ertönt ein Signalton und eine Benachrichtigung wird angezeigt.",
+                    "When an incoming packet (message, position or telemetry) from one of these callsigns is received, an alert tone sounds and a notification is shown.",
+                    "Quando arriva un pacchetto (messaggio, posizione o telemetria) da uno di questi nominativi, viene emesso un segnale acustico e mostrata una notifica.",
+                    "Cuando llega un paquete (mensaje, posici\u00f3n o telemetr\u00eda) de uno de estos indicativos, suena una alerta y se muestra una notificaci\u00f3n.")
+                <br />
+                @Loc.T(
+                    "Ohne SSID (z.\u00a0B. DH1FR) werden alle SSID dieses Rufzeichens erkannt. Mit SSID (z.\u00a0B. DH1FR-1) nur exakt dieses Rufzeichen.",
+                    "Without SSID (e.\u00a0g. DH1FR) all SSIDs of that callsign are matched. With SSID (e.\u00a0g. DH1FR-1) only that exact callsign.",
+                    "Senza SSID (es. DH1FR) vengono rilevati tutti gli SSID. Con SSID (es. DH1FR-1) solo quel nominativo esatto.",
+                    "Sin SSID (p.ej. DH1FR) se detectan todos los SSID. Con SSID (p.ej. DH1FR-1) solo ese indicativo exacto.")
+            </div>
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Rufzeichen-Liste", "Callsign List", "Lista nominativi", "Lista de indicativos")<br />
+                    <small>@Loc.T("(eine pro Zeile, z.\u00a0B. DH1FR oder DH1FR-1)", "(one per line, e.\u00a0g. DH1FR or DH1FR-1)", "(uno per riga, es. DH1FR o DH1FR-1)", "(uno por l\u00ednea, p.ej. DH1FR o DH1FR-1)")</small>
+                </label>
+                <textarea rows="4" @bind="_model.WatchCallsignsText"></textarea>
+
+                <label>@Loc.T("Auslöser", "Triggers", "Trigger", "Disparadores")</label>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WatchOnMessage" />
+                        @Loc.T("Nachrichten (MSG)", "Messages (MSG)", "Messaggi (MSG)", "Mensajes (MSG)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WatchOnPosition" />
+                        @Loc.T("Positionsbaken (POS)", "Position beacons (POS)", "Radiofari posizione (POS)", "Balizas de posición (POS)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WatchOnTelemetry" />
+                        @Loc.T("Telemetrie (TEL)", "Telemetry (TEL)", "Telemetria (TEL)", "Telemetría (TEL)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WatchOnAck" />
+                        @Loc.T("Bestätigungen (ACK)", "Acknowledgements (ACK)", "Conferme (ACK)", "Confirmaciones (ACK)")
+                    </label>
+                </div>
+
+                <label>
+                    @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)", "Durata visualizzazione (minuti)", "Duración de visualización (minutos)")
+                </label>
+                <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
+            </div>
+        </div>
+
         <!-- Sprache / Language -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">🌐 @Loc.T("Sprache", "Language", "Lingua", "Idioma")</h2>
+        <div class="settings-section @(IsOpen("lang") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("lang")'>🌐 @Loc.T("Sprache", "Language", "Lingua", "Idioma") <span class="section-chevron">@(IsOpen("lang") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Oberflächensprache", "UI Language", "Lingua interfaccia", "Idioma de la interfaz")</label>
                 <select @bind="_model.Language">
@@ -500,8 +553,8 @@
         </div>
 
         <!-- Datenbank / Database (Beta) -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">🗄️ @Loc.T("Datenbank (Beta)", "Database (Beta)", "Database (Beta)", "Base de datos (Beta)")</h2>
+        <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank (Beta)", "Database (Beta)", "Database (Beta)", "Base de datos (Beta)") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Monitor-Einträge (Rufzeichen, Nachrichtentexte, GPS, RSSI) werden in die externe Datenbank geschrieben. Nur im eigenen, abgesicherten Netz betreiben. Datenschutz beachten.",
@@ -635,8 +688,8 @@
         </div>
 
         <!-- Webhook -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">🔗 Webhook</h2>
+        <div class="settings-section @(IsOpen("webhook") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("webhook")'>🔗 Webhook <span class="section-chevron">@(IsOpen("webhook") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("Webhook aktiv", "Webhook Active", "Webhook attivo", "Webhook activo")</label>
                 <label class="settings-toggle">
@@ -669,8 +722,8 @@
         </div>
 
         <!-- QRZ.com -->
-        <div class="settings-section">
-            <h2 class="settings-section-title">🔍 QRZ.com</h2>
+        <div class="settings-section @(IsOpen("qrz") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("qrz")'>🔍 QRZ.com <span class="section-chevron">@(IsOpen("qrz") ? "▲" : "▼")</span></h2>
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Abfragen des QRZ.com XML-API. Kostenloser Account liefert Basisdaten (Vorname, Ort). Ein XML-Abo (ca. $30/Jahr) schaltet vollständige Profildaten frei.",
@@ -762,6 +815,32 @@
 
     private bool    _qrzTesting;
     private string? _qrzTestResult;
+
+    private HashSet<string> _openSections = [];
+    private bool IsOpen(string id) => _openSections.Contains(id);
+    private void Toggle(string id)
+    {
+        if (!_openSections.Remove(id)) _openSections.Add(id);
+        _ = JS.InvokeVoidAsync("meshcomChat.setSettingsSections",
+                string.Join(",", _openSections)).AsTask();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var saved = await JS.InvokeAsync<string?>("meshcomChat.getSettingsSections");
+            if (saved is not null)
+            {
+                _openSections = saved.Length > 0
+                    ? new HashSet<string>(saved.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    : [];
+                StateHasChanged();
+            }
+        }
+        catch (JSException) { }
+    }
 
     private async Task SendTelemetryNowAsync()
     {
@@ -1032,6 +1111,12 @@
             MonitorMaxMessages  = s.MonitorMaxMessages,
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
+            WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+            WatchOnMessage      = s.WatchOnMessage,
+            WatchOnPosition     = s.WatchOnPosition,
+            WatchOnTelemetry    = s.WatchOnTelemetry,
+            WatchOnAck          = s.WatchOnAck,
+            WatchAlertMinutes   = s.WatchAlertMinutes,
             DataPath            = s.DataPath,
             TimeOffsetHours     = s.TimeOffsetHours,
             AutoReplyEnabled    = s.AutoReplyEnabled,
@@ -1112,6 +1197,12 @@
         public int    MonitorMaxMessages  { get; set; } = 1000;
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
+        public string WatchCallsignsText  { get; set; } = string.Empty;
+        public bool   WatchOnMessage      { get; set; } = true;
+        public bool   WatchOnPosition     { get; set; } = true;
+        public bool   WatchOnTelemetry    { get; set; } = false;
+        public bool   WatchOnAck          { get; set; } = false;
+        public int    WatchAlertMinutes    { get; set; } = 5;
         public string DataPath            { get; set; } = string.Empty;
         public double TimeOffsetHours     { get; set; } = 0;
         public bool   AutoReplyEnabled    { get; set; }
@@ -1182,6 +1273,14 @@
             Groups              = GroupsText
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList(),
+            WatchCallsigns      = WatchCallsignsText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList(),
+            WatchOnMessage      = WatchOnMessage,
+            WatchOnPosition     = WatchOnPosition,
+            WatchOnTelemetry    = WatchOnTelemetry,
+            WatchOnAck          = WatchOnAck,
+            WatchAlertMinutes   = Math.Max(1, WatchAlertMinutes),
             DataPath            = DataPath,
             TimeOffsetHours     = TimeOffsetHours,
             AutoReplyEnabled    = AutoReplyEnabled,

@@ -83,6 +83,36 @@
                     console.warn('Audio notification failed:', e);
                 }
             };
+
+            // Three-tone ascending beep (660 → 880 → 1100 Hz) for watchlist alerts
+            window.playWatchlistBeep = function () {
+                try {
+                    var ctx = getAudioContext();
+                    function doPlay() {
+                        var now = ctx.currentTime;
+                        [0, 0.15, 0.30].forEach(function (offset, i) {
+                            var osc  = ctx.createOscillator();
+                            var gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'sine';
+                            osc.frequency.value = [660, 880, 1100][i];
+                            gain.gain.setValueAtTime(0.0, now + offset);
+                            gain.gain.linearRampToValueAtTime(0.3, now + offset + 0.02);
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.12);
+                            osc.start(now + offset);
+                            osc.stop(now + offset + 0.12);
+                        });
+                    }
+                    if (ctx.state === 'suspended') {
+                        ctx.resume().then(doPlay);
+                    } else {
+                        doPlay();
+                    }
+                } catch (e) {
+                    console.warn('Watchlist audio notification failed:', e);
+                }
+            };
         })();
 
         // Register service worker for PWA install prompt

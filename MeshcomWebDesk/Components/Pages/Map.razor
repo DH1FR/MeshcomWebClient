@@ -28,11 +28,44 @@
                 title="@Loc.T("50 km Radius um eigene Position", "50 km radius around own position", "50 km raggio intorno alla propria posizione", "Radio de 50 km alrededor de la propia posición")">
             📍 50 km
         </button>
+        <button class="map-ctrl-btn" @onclick="FitOwn25Async"
+                disabled="@(!UdpService.Status.OwnLatitude.HasValue)"
+                title="@Loc.T("25 km Radius um eigene Position", "25 km radius around own position", "25 km raggio intorno alla propria posizione", "Radio de 25 km alrededor de la propia posición")">
+            📍 25 km
+        </button>
         <button class="map-ctrl-btn @(_showRelayLines ? "map-ctrl-active" : "")"
                 @onclick="ToggleRelayLines"
                 title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths", "Mostra/nascondi percorsi relay", "Mostrar/ocultar rutas de relé")">
             🔗 @Loc.T("Pfade", "Paths", "Percorsi", "Rutas")
         </button>
+        <span class="map-ctrl-sep"></span>
+        <div class="map-search-wrap-ctrl">
+            <input class="map-search-input"
+                   value="@_searchCallsign"
+                   @oninput="OnSearchInput"
+                   @onkeyup="OnSearchKeyUp"
+                   placeholder="@Loc.T("Rufzeichen...", "Callsign...", "Nominativo...", "Indicativo...")" />
+            <button class="map-ctrl-btn" @onclick="SearchCallsignAsync"
+                    title="@Loc.T("Rufzeichen suchen", "Search callsign", "Cerca nominativo", "Buscar indicativo")">
+                🔍
+            </button>
+            @if (_showSearchResults && _searchResults.Count > 0)
+            {
+                <div class="map-search-results">
+                    @foreach (var cs in _searchResults)
+                    {
+                        var c = cs;
+                        <div class="map-search-result-item" @onclick="() => SelectSearchResultAsync(c)">
+                            @c
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        @if (_searchNotFound)
+        {
+            <span class="map-search-notfound">@Loc.T("Nicht gefunden", "Not found", "Non trovato", "No encontrado")</span>
+        }
     </div>
     <div class="map-wrapper">
         <div id="meshcom-map" class="map-container"></div>
@@ -123,6 +156,10 @@
     private bool _disposed;
     private bool _showRelayLines = true;
     private bool _showLegend    = true;
+    private string       _searchCallsign    = "";
+    private bool         _searchNotFound;
+    private List<string> _searchResults     = [];
+    private bool         _showSearchResults;
 
     protected override void OnInitialized()
     {
@@ -340,6 +377,77 @@
                     status.OwnLatitude.Value, status.OwnLongitude.Value, 50);
         }
         catch (Exception) { }
+    }
+
+    private async Task FitOwn25Async()
+    {
+        try
+        {
+            var status = UdpService.Status;
+            if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
+                await JS.InvokeVoidAsync("meshcomMap.fitOwn",
+                    status.OwnLatitude.Value, status.OwnLongitude.Value, 25);
+        }
+        catch (Exception) { }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchCallsign    = e.Value?.ToString() ?? "";
+        _searchNotFound    = false;
+        _showSearchResults = false;
+        _searchResults     = [];
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SearchCallsignAsync();
+        else if (e.Key == "Escape")
+            CloseSearchResults();
+    }
+
+    private void CloseSearchResults()
+    {
+        _showSearchResults = false;
+        _searchResults     = [];
+        _searchNotFound    = false;
+    }
+
+    private async Task SearchCallsignAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchCallsign)) return;
+        try
+        {
+            var results = await JS.InvokeAsync<string[]>("meshcomMap.findCallsigns", _searchCallsign.Trim());
+            if (results.Length == 0)
+            {
+                _searchNotFound    = true;
+                _showSearchResults = false;
+                _searchResults     = [];
+            }
+            else if (results.Length == 1)
+            {
+                await JS.InvokeVoidAsync("meshcomMap.jumpToCallsign", results[0]);
+                _searchCallsign = results[0];
+                CloseSearchResults();
+            }
+            else
+            {
+                _searchResults     = [.. results];
+                _showSearchResults = true;
+                _searchNotFound    = false;
+            }
+        }
+        catch (Exception) { }
+    }
+
+    private async Task SelectSearchResultAsync(string callsign)
+    {
+        try { await JS.InvokeVoidAsync("meshcomMap.jumpToCallsign", callsign); }
+        catch (Exception) { }
+        _searchCallsign = callsign;
+        CloseSearchResults();
     }
 
     public void Dispose()

@@ -226,6 +226,25 @@
         </div>
     </div>
 
+    @* ===== WATCHLIST TOAST ===== *@
+    @if (_watchlistAlerts.Count > 0)
+    {
+        <div class="watchlist-toast">
+            <div class="watchlist-toast-header">
+                <span>📻 @Loc.T("Rufzeichen gehört", "Callsign heard", "Nominativo sentito", "Indicativo escuchado")</span>
+                <button class="watchlist-toast-close" @onclick="() => _watchlistAlerts.Clear()">✕</button>
+            </div>
+            @foreach (var alert in _watchlistAlerts)
+            {
+                <div class="watchlist-toast-row">
+                    <span class="watchlist-callsign">@alert.Callsign</span>
+                    <span class="watchlist-badge">@alert.EventType</span>
+                    <span class="watchlist-age">@FormatAlertAge(alert.Time)</span>
+                </div>
+            }
+        </div>
+    }
+
     @* ===== STATUS BAR ===== *@
     <div class="status-bar">
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
@@ -316,6 +335,10 @@
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
 
+    private record WatchlistAlert(string Callsign, string EventType, DateTime Time);
+    private List<WatchlistAlert> _watchlistAlerts = [];
+    private bool _playWatchlistSound;
+
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptions<MeshcomSettings> SettingsOptions { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
@@ -328,6 +351,7 @@
         _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
+        ChatService.OnWatchlistHit += HandleWatchlistHit;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.ActiveTabKey;
         RefreshData();
@@ -395,6 +419,13 @@
         {
             _playSound = false;
             try { await JS.InvokeVoidAsync("playNotificationBeep"); }
+            catch (JSException) { }
+        }
+
+        if (_playWatchlistSound)
+        {
+            _playWatchlistSound = false;
+            try { await JS.InvokeVoidAsync("playWatchlistBeep"); }
             catch (JSException) { }
         }
     }
@@ -605,6 +636,45 @@
         Loc.OnChange -= StateHasChanged;
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
+        ChatService.OnWatchlistHit -= HandleWatchlistHit;
+    }
+
+    private async void HandleWatchlistHit(string callsign, MeshcomMessage message)
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                var eventType = message.IsPositionBeacon ? "POS" : message.IsTelemetry ? "TEL" : message.IsAck ? "ACK" : "MSG";
+                var existing = _watchlistAlerts.FirstOrDefault(a =>
+                    string.Equals(a.Callsign, callsign, StringComparison.OrdinalIgnoreCase));
+                if (existing is not null)
+                    _watchlistAlerts.Remove(existing);
+                _watchlistAlerts.Insert(0, new WatchlistAlert(callsign, eventType, DateTime.Now));
+                if (_soundEnabled)
+                    _playWatchlistSound = true;
+                StateHasChanged();
+            });
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.Value.WatchAlertMinutes) * 60 + 2));
+            if (!_disposed)
+                await InvokeAsync(() =>
+                {
+                    var limit = Math.Max(1, SettingsOptions.Value.WatchAlertMinutes);
+                    _watchlistAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
+                    StateHasChanged();
+                });
+        }
+        catch (Exception) { }
+    }
+
+    private string FormatAlertAge(DateTime t)
+    {
+        var s = (int)(DateTime.Now - t).TotalSeconds;
+        return s < 60
+            ? Loc.T($"vor {s}\u00a0s", $"{s}\u00a0s ago", $"{s}\u00a0s fa", $"hace {s}\u00a0s")
+            : Loc.T($"vor {s / 60}\u00a0min", $"{s / 60}\u00a0min ago", $"{s / 60}\u00a0min fa", $"hace {s / 60}\u00a0min");
     }
 
     private static string SrcTypeCss(string src) => src.ToLowerInvariant() switch
@@ -723,8 +793,15 @@
 
     private static string AckTooltip(MeshcomMessage m)
     {
-        if (m.IsAcknowledged)        return "Zugestellt";
-        if (m.SequenceNumber != null) return $"Gesendet (Seq #{m.SequenceNumber})";
+        if (m.IsAcknowledged) return "Zugestellt";
+        if (m.SequenceNumber != null)
+        {
+            if (m.To == "*" || m.To.StartsWith('#'))
+                return "Gesendet (kein ACK für Gruppe/Broadcast)";
+            if (m.SequenceNumber != "TX")
+                return $"Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…";
+            return "Gesendet · warte auf Bestätigung (ACK)…";
+        }
         return "Warte auf Node-Echo…";
     }
 
