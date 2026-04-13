@@ -283,7 +283,19 @@ window.meshcomMap = (function () {
             ]);
         },
 
-        searchCallsign: function (callsign) {
+        findCallsigns: function (query) {
+            if (!_map || !query) return [];
+            var q = query.trim().toUpperCase();
+            if (!q) return [];
+            var results = [];
+            Object.keys(_stationMarkers).forEach(function (key) {
+                if (key.indexOf(q) !== -1) results.push(key);
+            });
+            results.sort();
+            return results;
+        },
+
+        jumpToCallsign: function (callsign) {
             if (!_map || !callsign) return false;
             var key    = callsign.trim().toUpperCase();
             var marker = _stationMarkers[key];

@@ -34,15 +34,29 @@
             🔗 @Loc.T("Pfade", "Paths", "Percorsi", "Rutas")
         </button>
         <span class="map-ctrl-sep"></span>
-        <input class="map-search-input"
-               value="@_searchCallsign"
-               @oninput="OnSearchInput"
-               @onkeyup="OnSearchKeyUp"
-               placeholder="@Loc.T("Rufzeichen...", "Callsign...", "Nominativo...", "Indicativo...")" />
-        <button class="map-ctrl-btn" @onclick="SearchCallsignAsync"
-                title="@Loc.T("Rufzeichen suchen", "Search callsign", "Cerca nominativo", "Buscar indicativo")">
-            🔍
-        </button>
+        <div class="map-search-wrap-ctrl">
+            <input class="map-search-input"
+                   value="@_searchCallsign"
+                   @oninput="OnSearchInput"
+                   @onkeyup="OnSearchKeyUp"
+                   placeholder="@Loc.T("Rufzeichen...", "Callsign...", "Nominativo...", "Indicativo...")" />
+            <button class="map-ctrl-btn" @onclick="SearchCallsignAsync"
+                    title="@Loc.T("Rufzeichen suchen", "Search callsign", "Cerca nominativo", "Buscar indicativo")">
+                🔍
+            </button>
+            @if (_showSearchResults && _searchResults.Count > 0)
+            {
+                <div class="map-search-results">
+                    @foreach (var cs in _searchResults)
+                    {
+                        var c = cs;
+                        <div class="map-search-result-item" @onclick="() => SelectSearchResultAsync(c)">
+                            @c
+                        </div>
+                    }
+                </div>
+            }
+        </div>
         @if (_searchNotFound)
         {
             <span class="map-search-notfound">@Loc.T("Nicht gefunden", "Not found", "Non trovato", "No encontrado")</span>
@@ -137,8 +151,10 @@
     private bool _disposed;
     private bool _showRelayLines = true;
     private bool _showLegend    = true;
-    private string _searchCallsign = "";
-    private bool   _searchNotFound;
+    private string       _searchCallsign    = "";
+    private bool         _searchNotFound;
+    private List<string> _searchResults     = [];
+    private bool         _showSearchResults;
 
     protected override void OnInitialized()
     {
@@ -360,14 +376,25 @@
 
     private void OnSearchInput(ChangeEventArgs e)
     {
-        _searchCallsign = e.Value?.ToString() ?? "";
-        _searchNotFound = false;
+        _searchCallsign    = e.Value?.ToString() ?? "";
+        _searchNotFound    = false;
+        _showSearchResults = false;
+        _searchResults     = [];
     }
 
     private async Task OnSearchKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
             await SearchCallsignAsync();
+        else if (e.Key == "Escape")
+            CloseSearchResults();
+    }
+
+    private void CloseSearchResults()
+    {
+        _showSearchResults = false;
+        _searchResults     = [];
+        _searchNotFound    = false;
     }
 
     private async Task SearchCallsignAsync()
@@ -375,10 +402,35 @@
         if (string.IsNullOrWhiteSpace(_searchCallsign)) return;
         try
         {
-            var found = await JS.InvokeAsync<bool>("meshcomMap.searchCallsign", _searchCallsign.Trim());
-            _searchNotFound = !found;
+            var results = await JS.InvokeAsync<string[]>("meshcomMap.findCallsigns", _searchCallsign.Trim());
+            if (results.Length == 0)
+            {
+                _searchNotFound    = true;
+                _showSearchResults = false;
+                _searchResults     = [];
+            }
+            else if (results.Length == 1)
+            {
+                await JS.InvokeVoidAsync("meshcomMap.jumpToCallsign", results[0]);
+                _searchCallsign = results[0];
+                CloseSearchResults();
+            }
+            else
+            {
+                _searchResults     = [.. results];
+                _showSearchResults = true;
+                _searchNotFound    = false;
+            }
         }
         catch (Exception) { }
+    }
+
+    private async Task SelectSearchResultAsync(string callsign)
+    {
+        try { await JS.InvokeVoidAsync("meshcomMap.jumpToCallsign", callsign); }
+        catch (Exception) { }
+        _searchCallsign = callsign;
+        CloseSearchResults();
     }
 
     public void Dispose()
