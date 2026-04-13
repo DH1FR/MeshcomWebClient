@@ -85,12 +85,14 @@ Filename: "{sys}\sc.exe"; Parameters: "delete {#ServiceName}"; Flags: runhidden;
 [Code]
 // Stop and remove the existing service before upgrading so files can be replaced.
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  RC: Integer;
 begin
   if CurStep = ssInstall then
   begin
-    Exec(ExpandConstant('{sys}\sc.exe'), 'stop {#ServiceName}',   '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec(ExpandConstant('{sys}\sc.exe'), 'stop {#ServiceName}',   '', SW_HIDE, ewWaitUntilTerminated, RC);
     Sleep(2000);
-    Exec(ExpandConstant('{sys}\sc.exe'), 'delete {#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec(ExpandConstant('{sys}\sc.exe'), 'delete {#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, RC);
     Sleep(1000);
   end;
 end;
