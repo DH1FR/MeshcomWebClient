@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.DataProtection;
 using MeshcomWebDesk.Models;
 
 namespace MeshcomWebDesk.Services;
@@ -11,20 +12,29 @@ namespace MeshcomWebDesk.Services;
 /// configuration source layered on top of appsettings.json, which means it works
 /// even when appsettings.json is mounted read-only in Docker.
 /// ASP.NET Core's built-in file-watcher reloads IConfiguration automatically after saving.
+/// Sensitive fields (connection strings, tokens, passwords) are encrypted using the
+/// ASP.NET Core Data Protection API before writing (prefix <c>"dp:"</c>).
 /// </summary>
 public class SettingsService
 {
     private readonly string _overridePath;
     private readonly ILogger<SettingsService> _logger;
+    private readonly IDataProtector _protector;
 
-    public SettingsService(IConfiguration config, ILogger<SettingsService> logger)
+    public SettingsService(IConfiguration config, ILogger<SettingsService> logger,
+                           IDataProtectionProvider dataProtection)
     {
         var dataPath  = config.GetValue<string>($"{MeshcomSettings.SectionName}:DataPath")
                         ?? Path.GetTempPath();
         Directory.CreateDirectory(dataPath);
         _overridePath = Path.Combine(dataPath, "appsettings.override.json");
-        _logger = logger;
+        _logger       = logger;
+        _protector    = dataProtection.CreateProtector("MeshcomWebDesk.Settings.v1");
     }
+
+    /// <summary>Encrypts a non-empty value with the Data Protection API and prepends "dp:".</summary>
+    private string Encrypt(string value) =>
+        string.IsNullOrEmpty(value) ? value : "dp:" + _protector.Protect(value);
 
     public async Task SaveMeshcomSettingsAsync(MeshcomSettings s)
     {
@@ -77,15 +87,15 @@ public class SettingsService
                     ["WeatherRole"] = m.WeatherRole
                 }).ToArray()),
                 ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
-                ["TelemetryApiKey"]     = s.TelemetryApiKey,
+                ["TelemetryApiKey"]     = Encrypt(s.TelemetryApiKey),
                 ["Language"]            = s.Language,
                 ["Database"]            = new JsonObject
                 {
                     ["Provider"]              = s.Database.Provider,
-                    ["MySqlConnectionString"] = s.Database.MySqlConnectionString,
+                    ["MySqlConnectionString"] = Encrypt(s.Database.MySqlConnectionString),
                     ["MySqlTableName"]        = s.Database.MySqlTableName,
                     ["InfluxUrl"]             = s.Database.InfluxUrl,
-                    ["InfluxToken"]           = s.Database.InfluxToken,
+                    ["InfluxToken"]           = Encrypt(s.Database.InfluxToken),
                     ["InfluxOrg"]             = s.Database.InfluxOrg,
                     ["InfluxBucket"]          = s.Database.InfluxBucket,
                     ["LogInserts"]            = s.Database.LogInserts
@@ -102,7 +112,7 @@ public class SettingsService
                 {
                     ["Enabled"]         = s.Qrz.Enabled,
                     ["Username"]        = s.Qrz.Username,
-                    ["Password"]        = s.Qrz.Password,
+                    ["Password"]        = Encrypt(s.Qrz.Password),
                     ["LogRequests"]     = s.Qrz.LogRequests,
                     ["CacheMaxAgeDays"] = s.Qrz.CacheMaxAgeDays
                 }
