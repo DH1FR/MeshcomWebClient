@@ -50,6 +50,25 @@ public class MeshcomSettings
     public List<string> Groups { get; set; } = [];
 
     /// <summary>
+    /// Watchlist callsigns. An entry without SSID (e.g. "DH1FR") matches all SSIDs of that
+    /// base callsign (DH1FR, DH1FR-1, DH1FR-11, …). An entry with SSID (e.g. "DH1FR-1")
+    /// only matches that exact callsign.
+    /// </summary>
+    public List<string> WatchCallsigns { get; set; } = [];
+
+    /// <summary>React to incoming chat messages from watchlist callsigns (default: true).</summary>
+    public bool WatchOnMessage { get; set; } = true;
+
+    /// <summary>React to position beacons from watchlist callsigns (default: true).</summary>
+    public bool WatchOnPosition { get; set; } = true;
+
+    /// <summary>React to telemetry packets from watchlist callsigns (default: false – arrives periodically).</summary>
+    public bool WatchOnTelemetry { get; set; } = false;
+
+    /// <summary>React to APRS ACK packets from watchlist callsigns (default: false).</summary>
+    public bool WatchOnAck { get; set; } = false;
+
+    /// <summary>
     /// Directory path for persistent state storage (chat tabs, MH list, monitor feed).
     /// Data is loaded on startup and saved every 5 minutes and on graceful shutdown.
     /// </summary>

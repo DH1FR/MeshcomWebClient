@@ -52,6 +52,12 @@ public class ChatService
     public event Action<MeshcomMessage>? OnBotCommand;
 
     /// <summary>
+    /// Raised when an incoming packet's sender matches a <see cref="MeshcomSettings.WatchCallsigns"/> entry.
+    /// Arguments: received callsign (as-is), the triggering message.
+    /// </summary>
+    public event Action<string, MeshcomMessage>? OnWatchlistHit;
+
+    /// <summary>
     /// The key of the last tab the user actively selected.
     /// Persisted in memory (singleton lifetime) so Chat.razor can restore it
     /// immediately in OnInitialized without requiring JS interop.
@@ -165,8 +171,9 @@ public class ChatService
 
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
+        CheckWatchlist(message);
 
-        // Fire bot command event for direct messages to us starting with "--" or em dash
+        // Fire bot command event for direct messages
         if (!message.IsBroadcast &&
             string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase) &&
             MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text))
@@ -298,9 +305,10 @@ public class ChatService
 
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
+        CheckWatchlist(message);
     }
 
-    /// <summary>Remove all entries from the MH list.</summary>
+    /// <summary>Remove all entries from the MH list.
     public void ClearMhList()
     {
         _mhList.Clear();
@@ -381,10 +389,11 @@ public class ChatService
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
         _ = _webhook.SendAsync(message, "position");
+        CheckWatchlist(message);
     }
 
     /// <summary>
-    /// Process a telemetry packet: update MH data and add to monitor feed.
+    /// Process a telemetry packet
     /// Does NOT open or update any chat tab.
     /// </summary>
     public void AddTelemetry(MeshcomMessage message)
@@ -393,9 +402,10 @@ public class ChatService
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
         _ = _webhook.SendAsync(message, "telemetry");
+        CheckWatchlist(message);
     }
 
-    /// <summary>Get a specific tab.</summary>
+    /// <summary>Get a specific tab.
     public ChatTab? GetTab(string key)
     {
         _tabs.TryGetValue(key, out var tab);
@@ -565,6 +575,42 @@ public class ChatService
 
     // Convenience overload for callers that don't need the wasNewDirect flag.
     private ChatTab GetOrCreateTab(string key) => GetOrCreateTab(key, out _);
+
+    /// <summary>
+    /// Checks <paramref name="message"/>.From against every entry in <see cref="MeshcomSettings.WatchCallsigns"/>.
+    /// Fires <see cref="OnWatchlistHit"/> on the first match.
+    /// </summary>
+    private void CheckWatchlist(MeshcomMessage message)
+    {
+        if (string.IsNullOrEmpty(message.From)) return;
+        var list = _settings.WatchCallsigns;
+        if (list.Count == 0) return;
+        if (message.IsAck            && !_settings.WatchOnAck)      return;
+        if (message.IsPositionBeacon && !_settings.WatchOnPosition)  return;
+        if (message.IsTelemetry      && !_settings.WatchOnTelemetry) return;
+        if (!message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry && !_settings.WatchOnMessage) return;
+        foreach (var entry in list)
+        {
+            if (string.IsNullOrWhiteSpace(entry)) continue;
+            if (MatchesWatchEntry(message.From, entry.Trim()))
+            {
+                OnWatchlistHit?.Invoke(message.From, message);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="callsign"/> matches a watchlist <paramref name="entry"/>.
+    /// Entry with SSID (contains '-') → exact match. Entry without SSID → base-callsign match.
+    /// </summary>
+    private static bool MatchesWatchEntry(string callsign, string entry)
+    {
+        if (entry.Contains('-'))
+            return string.Equals(callsign, entry, StringComparison.OrdinalIgnoreCase);
+        var baseCs = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
+        return string.Equals(baseCs, entry, StringComparison.OrdinalIgnoreCase);
+    }
 
     private void NotifyChange()
     {

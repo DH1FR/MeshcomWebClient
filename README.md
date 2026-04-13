@@ -132,6 +132,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Changes are written to `appsettings.override.json` in `DataPath` (Docker-safe read-only mount supported)
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
+- **Collapsible sections** – all 13 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state persists during the session
 
 ### 🌐 UI Language
 - Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
@@ -173,6 +174,15 @@ and makes a full web client for MeshCom available via a simple URL
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
 - **Auto-split**: replies longer than 149 characters are automatically split into consecutive packets (2 s pause between parts) – same strategy as multi-bucket telemetry
 - Enabled / disabled via `BotEnabled` – applies **live without restart**
+
+### 📻 Watchlist – Callsign alert
+- **Configurable callsign list** – specify any number of callsigns to watch
+- **Flexible matching**: entry *without* SSID (e.g. `DH1FR`) matches all SSIDs (`DH1FR`, `DH1FR-1`, `DH1FR-11`, …); entry *with* SSID (e.g. `DH1FR-1`) matches only that exact callsign
+- **Alert tone** 🔔 (ascending three-tone beep, distinct from the normal message beep) when a watched callsign is heard
+- **Toast notification** in the top-right corner showing the callsign, packet type badge (`MSG` / `POS` / `TEL` / `ACK`) and relative age; auto-dismisses after 30 s; multiple hits are stacked in the same toast
+- **Per-type filter** – independently enable/disable alerts for: chat messages (MSG), position beacons (POS), telemetry (TEL, default **off** to avoid noise from periodic data), and ACKs (ACK, default off)
+- Respects the global 🔕 mute toggle in the status bar – no sound when muted
+- Configured in **Settings → 📻 Watchlist**; changes apply **live without restart**
 
 ### 📊 Telemetry (Telemetrie-Sender)
 - **Periodic telemetry messages**
@@ -222,7 +232,7 @@ and makes a full web client for MeshCom available via a simple URL
 ### 🔗 Webhook
 - **HTTP POST** to a configurable URL on incoming events
 - Configurable **triggers**: chat messages / position beacons / telemetry (each individually)
-- **JSON payload**: `event`, `timestamp`, `from`, `to`, `text`, `rssi`, `snr`, `latitude`, `longitude`, `altitude`, `battery`, `firmware`, `relay_path`, `src_type`
+- **JSON payload**: `event`, `timestamp`, `from`, `to`, `text`, `rssi`, `snr`, `latitude`, `longitude`, `altitude`, `battery`, `firmware`, `relay_path`, `src_type`; telemetry events additionally include `temp1`, `temp2`, `humidity`, `pressure`; `null` fields are omitted
 - Fire-and-forget (10 s timeout); errors logged and swallowed – never blocks reception
 - Configured in **Settings → 🔗 Webhook**; changes apply **live without restart**
 - Compatible with **Home Assistant** webhooks, Node-RED, n8n, IFTTT, custom endpoints
@@ -357,6 +367,11 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "MonitorMaxMessages": 1000,            // max monitor history (oldest dropped)
   "GroupFilterEnabled": true,            // only show whitelisted group tabs
   "Groups":             ["#20","#262"],  // whitelisted groups (GroupFilterEnabled=true)
+  "WatchCallsigns":     ["DH1FR","OE1KBC-1"], // watched callsigns (without SSID = match all SSIDs)
+  "WatchOnMessage":     true,            // alert on chat messages from watched callsigns
+  "WatchOnPosition":    true,            // alert on position beacons
+  "WatchOnTelemetry":   false,           // alert on telemetry packets (periodic – off by default)
+  "WatchOnAck":         false,           // alert on ACK packets
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
   "AutoReplyText":      "...",           // auto-reply text; {version} → app version
@@ -987,6 +1002,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.8.0
+- **feat:** 📻 **Watchlist – callsign alert system** – configurable list of callsigns to watch; matching supports base-callsign wildcards (`DH1FR` matches all SSIDs) or exact SSID matching (`DH1FR-1`); triggers an ascending three-tone alert beep (distinct from the message beep) and a self-dismissing toast notification in the UI; per-type filters for MSG / POS / TEL / ACK; telemetry alerts off by default to avoid noise from periodic packets; respects the global mute toggle
+- **feat:** ⚙️ **Settings – collapsible sections** – all 13 settings sections are now individually collapsible; all start collapsed for a compact initial view; state persists during the session
+- **feat:** 🔗 **Webhook – telemetry fields in payload** – `temp1`, `temp2`, `humidity`, `pressure` are now included in the webhook JSON for `eventType="telemetry"`; `null` fields remain omitted via `WhenWritingNull`
+- **fix:** ⚙️ **Settings – Watchlist persistence** – `WatchCallsigns`, `WatchOnMessage`, `WatchOnPosition`, `WatchOnTelemetry` and `WatchOnAck` were not written to `appsettings.override.json`; fixed in `SettingsService.SaveMeshcomSettingsAsync`
 
 ### v1.7.0
 - **feat:** 🤖 **Bot command system** – incoming direct messages starting with `--` (or `—` em dash) are interpreted as bot commands; built-in: `--help`, `--version`, `--time`, `--mh`; fully configurable user-defined commands with `{variable}` placeholder support in **Settings → 🤖 Bot**; `IBotCommand` interface for developer extensions

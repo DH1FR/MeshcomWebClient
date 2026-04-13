@@ -1197,6 +1197,9 @@ h1:focus {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    justify-content: space-between;
 }
 
 .settings-help-banner {
@@ -1773,6 +1776,93 @@ h1:focus {
 }
 
 .map-info-sep { color: #3a3a5e; }
+.settings-section-collapsed > div,
+.settings-section-collapsed > a {
+    display: none;
+}
+
+.section-chevron {
+    font-size: 10px;
+    color: #8b949e;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-left: 4px;
+}
+
 .rssi-good    { color: #3fb950; }
 .rssi-ok      { color: #e3b341; }
 .rssi-weak    { color: #f85149; }
+
+/* ===== Watchlist Toast ===== */
+.watchlist-toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    background: #16213e;
+    border: 1px solid #e3b341;
+    border-radius: 8px;
+    min-width: 210px;
+    max-width: 300px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+    animation: watchlist-toast-in 0.2s ease;
+}
+
+@keyframes watchlist-toast-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.watchlist-toast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #1a1a4e;
+    border-radius: 8px 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e3b341;
+}
+
+.watchlist-toast-close {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.watchlist-toast-close:hover { color: #ff3333; }
+
+.watchlist-toast-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-top: 1px solid #0f3460;
+    font-size: 13px;
+}
+
+.watchlist-callsign {
+    font-weight: 600;
+    flex: 1;
+    color: #7ee787;
+}
+
+.watchlist-badge {
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 5px;
+    background: #0f3460;
+    color: #a0c4ff;
+}
+
+.watchlist-age {
+    font-size: 11px;
+    color: #8b949e;
+    white-space: nowrap;
+}

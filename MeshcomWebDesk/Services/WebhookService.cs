@@ -57,7 +57,11 @@ public sealed class WebhookService
             battery    = msg.Battery,
             firmware   = msg.Firmware,
             relay_path = msg.RelayPath,
-            src_type   = msg.SrcType
+            src_type   = msg.SrcType,
+            temp1      = msg.Temp1,
+            temp2      = msg.Temp2,
+            humidity   = msg.Humidity,
+            pressure   = msg.Pressure
         };
 
         try
