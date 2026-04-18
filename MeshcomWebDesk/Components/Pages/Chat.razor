@@ -35,7 +35,7 @@
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
                     }
-                    <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
+                    <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
             <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
@@ -253,12 +253,8 @@
             @(_soundEnabled ? "🔔" : "🔕")
         </button>
         <span class="status-sep">|</span>
-        <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
-            @(_status.IsListening ? "🟢" : "🔴") <span class="status-label">UDP @(_status.IsListening ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
-        </span>
-        <span class="status-sep">|</span>
-        <span class="status-item @(_status.IsRegistered ? "status-ok" : "status-warn")">
-            @(_status.IsRegistered ? "✅" : "⏳") <span class="status-label">@(_status.IsRegistered ? Loc.T("Registriert", "Registered", "Registrato", "Registrado") : Loc.T("Nicht registriert", "Not registered", "Non registrato", "No registrado"))</span>
+        <span class="status-item @UdpStatusCss">
+            @UdpStatusIcon <span class="status-label">UDP @UdpStatusLabel</span>
         </span>
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
@@ -526,6 +522,20 @@
         ChatService.ActiveTabKey = key;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
+    }
+
+    private async Task ConfirmCloseTab(string key)
+    {
+        var tab = _tabs.FirstOrDefault(t => t.Key == key);
+        var label = tab?.Title ?? key;
+        var msg = Loc.T(
+            $"Tab \"{label}\" wirklich schließen?",
+            $"Close tab \"{label}\"?",
+            $"Chiudere la scheda \"{label}\"?",
+            $"¿Cerrar la pestaña \"{label}\"?");
+        var confirmed = await JS.InvokeAsync<bool>("confirm", msg);
+        if (confirmed)
+            CloseTab(key);
     }
 
     private void CloseTab(string key)
@@ -807,6 +817,20 @@
 
     private static string BeaconTimeCss(DateTime nextSend) =>
         (nextSend - DateTime.Now).TotalMinutes < 10 ? "beacon-time beacon-time-soon" : "beacon-time";
+
+    private string UdpStatusCss => !_status.IsListening ? "status-err"
+        : _status.HasReceivedData ? "status-ok"
+        : "status-warn";
+
+    private string UdpStatusIcon => !_status.IsListening ? "🔴"
+        : _status.HasReceivedData ? "🟢"
+        : "🟡";
+
+    private string UdpStatusLabel => !_status.IsListening
+        ? Loc.T("Kein Socket", "No socket", "Nessun socket", "Sin socket")
+        : _status.HasReceivedData
+            ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
+            : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 }

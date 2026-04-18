@@ -65,11 +65,24 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Statusanzeige in der Statusleiste
+
+| Symbol | Bedeutung |
+|--------|-----------|
+| 🔴 UDP **Kein Socket** | UDP-Port konnte nicht gebunden werden (z. B. Port bereits belegt) |
+| 🟡 UDP **Warte auf Signal** | Socket aktiv, aber noch kein Paket vom Node empfangen |
+| 🟢 UDP **Empfang OK** | Mindestens ein UDP-Paket wurde vom Node empfangen |
+
+> ℹ️ Da UDP verbindungslos ist, gibt es kein klassisches „Verbunden". Grün bedeutet: Daten kommen tatsächlich an.
+
+---
+
 ## Typische Fehlerquellen
 
 | Symptom | Mögliche Ursache |
 |---------|-----------------|
-| Status: 🔴 Inactive | Node sendet nicht an die richtige IP / falscher Port |
+| Status: 🔴 Kein Socket | UDP-Port bereits belegt oder Berechtigungsfehler |
+| Status: 🟡 Warte auf Signal | Node sendet nicht an die richtige IP / falscher Port |
 | Keine eingehenden Nachrichten | Firewall blockiert UDP 1799 |
 | Kann senden, aber nicht empfangen | Listen IP falsch (z. B. konkrete IP statt `0.0.0.0`) |
 | Kann empfangen, aber nicht senden | Device IP oder Device Port falsch |

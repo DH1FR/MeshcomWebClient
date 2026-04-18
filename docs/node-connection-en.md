@@ -65,11 +65,24 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Status Bar Indicator
+
+| Symbol | Meaning |
+|--------|---------|
+| 🔴 UDP **No socket** | UDP port could not be bound (e.g. port already in use) |
+| 🟡 UDP **Waiting for signal** | Socket active, but no packet received from the node yet |
+| 🟢 UDP **Receiving** | At least one UDP packet has been received from the node |
+
+> ℹ️ Since UDP is connectionless, there is no classic "connected" state. Green means data is actually arriving.
+
+---
+
 ## Common Problems
 
 | Symptom | Possible Cause |
 |---------|---------------|
-| Status: 🔴 Inactive | Node is not sending to the correct IP / wrong port |
+| Status: 🔴 No socket | UDP port already in use or permission error |
+| Status: 🟡 Waiting for signal | Node is not sending to the correct IP / wrong port |
 | No incoming messages | Firewall blocking UDP 1799 |
 | Can send but not receive | Listen IP incorrect (e.g. specific IP instead of `0.0.0.0`) |
 | Can receive but not send | Device IP or Device Port incorrect |
