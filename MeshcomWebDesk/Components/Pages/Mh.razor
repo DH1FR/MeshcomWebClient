@@ -10,6 +10,7 @@
 @inject IOptions<MeshcomSettings> SettingsOptions
 @inject LanguageService Loc
 @inject QrzService QrzService
+@inject NavigationManager Nav
 
 <PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes")</PageTitle>
 
@@ -320,6 +321,7 @@
     private void OpenChat(string callsign)
     {
         ChatService.OpenTab(callsign.ToUpperInvariant());
+        Nav.NavigateTo("/");
     }
 
     private void RemoveStation(string callsign)
