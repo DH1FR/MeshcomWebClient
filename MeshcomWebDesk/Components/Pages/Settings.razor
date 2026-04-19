@@ -829,39 +829,40 @@
                 ⚡ @Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")
                 <span class="section-chevron">@(IsOpen("quicktexts") ? "▲" : "▼")</span>
             </h2>
-            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
-                ℹ️ @Loc.T(
-                    "Schnelltexte erscheinen als Buttons in der Sendeleiste (⚡). Klick lädt den Text in das Eingabefeld – Du kannst ihn noch anpassen, bevor Du sendest.",
-                    "Quick texts appear as buttons in the send bar (⚡). A click loads the text into the input field – you can still edit before sending.",
-                    "I testi rapidi appaiono come pulsanti nella barra di invio (⚡). Il clic carica il testo nel campo – puoi ancora modificarlo prima di inviare.",
-                    "Los textos rápidos aparecen como botones en la barra de envío (⚡). Al hacer clic el texto se carga en el campo – aún puedes editarlo antes de enviar.")
-            </div>
-            <table class="telemetry-mapping-table">
-                <thead>
-                    <tr>
-                        <th style="width:140px">@Loc.T("Bezeichnung", "Label", "Etichetta", "Etiqueta")</th>
-                        <th>@Loc.T("Text (max. 149 Zeichen)", "Text (max. 149 characters)", "Testo (max. 149 caratteri)", "Texto (máx. 149 caracteres)")</th>
-                        <th style="width:36px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var qt in _model.QuickTexts)
-                    {
+            <div>
+                <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                    ℹ️ @Loc.T(
+                        "Schnelltexte erscheinen als Buttons in der Sendeleiste (⚡). Klick lädt den Text in das Eingabefeld – Du kannst ihn noch anpassen, bevor Du sendest.",
+                        "Quick texts appear as buttons in the send bar (⚡). A click loads the text into the input field – you can still edit before sending.",
+                        "I testi rapidi appaiono come pulsanti nella barra di invio (⚡). Il clic carica il testo nel campo – puoi ancora modificarlo prima di inviare.",
+                        "Los textos rápidos aparecen como botones en la barra de envío (⚡). Al hacer clic el texto se carga en el campo – aún puedes editarlo antes de enviar.")
+                </div>
+                <table class="telemetry-mapping-table">
+                    <thead>
                         <tr>
-                            <td><input type="text" @bind="qt.Label" placeholder="@Loc.T("z. B. 73", "e.g. 73", "es. 73", "p.ej. 73")" style="width:100%" /></td>
-                            <td>
-                                <div style="display:flex;align-items:center;gap:6px">
-                                    <input type="text" @bind="qt.Text" maxlength="149"
-                                           placeholder="@Loc.T("Nachrichtentext…", "Message text…", "Testo messaggio…", "Texto del mensaje…")"
-                                           style="width:100%" />
-                                    <span style="font-size:11px;color:#6e7681;white-space:nowrap">@qt.Text.Length/149</span>
-                                </div>
-                            </td>
-                            <td><button type="button" class="btn-remove" @onclick="() => _model.QuickTexts.Remove(qt)">✕</button></td>
+                            <th style="width:140px">@Loc.T("Bezeichnung", "Label", "Etichetta", "Etiqueta")</th>
+                            <th>@Loc.T("Text (max. 149 Zeichen)", "Text (max. 149 characters)", "Testo (max. 149 caratteri)", "Texto (máx. 149 caracteres)")</th>
+                            <th style="width:36px"></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var qt in _model.QuickTexts)
+                        {
+                            <tr>
+                                <td><input type="text" @bind="qt.Label" placeholder="@Loc.T("z. B. 73", "e.g. 73", "es. 73", "p.ej. 73")" style="width:100%" /></td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:6px">
+                                        <input type="text" @bind="qt.Text" maxlength="149"
+                                               placeholder="@Loc.T("Nachrichtentext…", "Message text…", "Testo messaggio…", "Texto del mensaje…")"
+                                               style="width:100%" />
+                                        <span style="font-size:11px;color:#6e7681;white-space:nowrap">@qt.Text.Length/149</span>
+                                    </div>
+                                </td>
+                                <td><button type="button" class="btn-remove" @onclick="() => _model.QuickTexts.Remove(qt)">✕</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
                 <button type="button" class="btn-add"
                         @onclick="() => _model.QuickTexts.Add(new QuickTextEntry())">
@@ -903,6 +904,7 @@
                     </table>
                 </div>
             }
+            </div>
         </div>
 
         <div class="settings-actions">
