@@ -97,14 +97,34 @@
     <div id="lower-pane" class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
         <div class="pane-header">
             <span>📡 Monitor</span>
-            <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries", "Voci", "Entradas")</span>
+            <span class="mon-filter-wrap">
+                <span class="mon-filter-icon">🔍</span>
+                <input class="mon-filter-input"
+                       value="@_monitorFilter"
+                       @oninput="e => _monitorFilter = e.Value?.ToString() ?? string.Empty"
+                       placeholder="@Loc.T("Rufzeichen oder Text…", "Callsign or text…", "Nominativo o testo…", "Indicativo o texto…")" />
+                @if (!string.IsNullOrEmpty(_monitorFilter))
+                {
+                    <button class="mon-filter-clear" @onclick="() => _monitorFilter = string.Empty" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
+                }
+            </span>
+            <span class="msg-count">
+                @if (string.IsNullOrEmpty(_monitorFilter))
+                {
+                    @($"{_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                }
+                else
+                {
+                    @($"{_filteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                }
+            </span>
             <button class="mon-toggle-btn" @onclick="ToggleMonitorAsync"
                     title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor", "Nascondi monitor", "Ocultar monitor") : Loc.T("Monitor einblenden", "Show Monitor", "Mostra monitor", "Mostrar monitor"))">
                 @(_showMonitor ? "▼" : "▲")
             </button>
         </div>
         <div class="mon-list" id="raw-messages">
-            @foreach (var m in _allMessages)
+            @foreach (var m in _filteredMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
                     <span class="mon-time" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
@@ -330,6 +350,21 @@
     private bool _playSound;
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
+    private string _monitorFilter = string.Empty;
+
+    private IReadOnlyList<MeshcomMessage> _filteredMessages =>
+        string.IsNullOrWhiteSpace(_monitorFilter)
+            ? _allMessages
+            : _allMessages.Where(m =>
+                Contains(m.From,    _monitorFilter) ||
+                Contains(m.To,      _monitorFilter) ||
+                Contains(m.Text,    _monitorFilter) ||
+                Contains(m.RawData, _monitorFilter))
+              .ToList();
+
+    private static bool Contains(string? value, string filter) =>
+        !string.IsNullOrEmpty(value) &&
+        value.Contains(filter, StringComparison.OrdinalIgnoreCase);
 
     private record WatchlistAlert(string Callsign, string EventType, DateTime Time);
     private List<WatchlistAlert> _watchlistAlerts = [];
