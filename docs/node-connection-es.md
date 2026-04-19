@@ -65,6 +65,18 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Filtro del Monitor
+
+El **panel del monitor** (área inferior) tiene un campo de búsqueda 🔍 en la barra de título.
+
+- Escribe un **indicativo** o un **fragmento de texto** para filtrar las filas al instante
+- Busca en: `De`, `Para`, `texto del mensaje`, `datos brutos`
+- **No distingue mayúsculas/minúsculas**, la posición en el texto no importa
+- El contador cambia a `X / Y Entradas` cuando hay un filtro activo
+- El botón **×** borra el filtro
+
+---
+
 ## Indicador de estado en la barra de estado
 
 | Símbolo | Significado |

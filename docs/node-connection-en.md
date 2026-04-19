@@ -65,6 +65,18 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Monitor Filter
+
+The **monitor pane** (lower area) has a search field 🔍 in its title bar.
+
+- Type any **callsign** or **text fragment** to instantly filter the rows
+- Searches: `From`, `To`, `message text`, `raw data`
+- **Case-insensitive**, position in text does not matter
+- The counter switches to `X / Y Entries` while a filter is active
+- The **×** button clears the filter
+
+---
+
 ## Status Bar Indicator
 
 | Symbol | Meaning |

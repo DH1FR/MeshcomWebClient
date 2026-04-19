@@ -65,6 +65,18 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Monitor-Filter
+
+Im **Monitor-Fenster** (unterer Bereich) befindet sich in der Titelleiste ein Suchfeld 🔍.
+
+- Eingabe eines **Rufzeichens** oder **Textfragments** filtert die Einträge sofort
+- Suche in: `Von`, `An`, `Nachrichtentext`, `Rohdaten`
+- **Groß-/Kleinschreibung** spielt keine Rolle, Position im Text ist egal
+- Der Zähler wechselt auf `X / Y Einträge` wenn ein Filter aktiv ist
+- **×**-Button löscht den Filter wieder
+
+---
+
 ## Statusanzeige in der Statusleiste
 
 | Symbol | Bedeutung |

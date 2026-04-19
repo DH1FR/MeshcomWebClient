@@ -65,6 +65,18 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Filtro Monitor
+
+Il **riquadro monitor** (area inferiore) ha un campo di ricerca 🔍 nella barra del titolo.
+
+- Digita un **nominativo** o un **frammento di testo** per filtrare le righe immediatamente
+- Ricerca in: `Da`, `A`, `testo del messaggio`, `dati grezzi`
+- **Non distingue maiuscole/minuscole**, la posizione nel testo non ha importanza
+- Il contatore passa a `X / Y Voci` quando un filtro è attivo
+- Il pulsante **×** cancella il filtro
+
+---
+
 ## Indicatore di stato nella barra di stato
 
 | Simbolo | Significato |

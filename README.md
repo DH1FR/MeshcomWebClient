@@ -98,9 +98,10 @@ and makes a full web client for MeshCom available via a simple URL
 - Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
 - **Resizable**: drag the divider bar between chat and monitor to adjust the split – last position is saved in `localStorage` and restored on the next visit
 - Collapsible on mobile (toggle button)
+- **Live filter** 🔍 in the monitor title bar – type any callsign or text fragment to instantly show only matching rows; the entry counter switches to `X / Y Entries` while a filter is active; clear with the × button
 
 ### 📊 Status bar
-- UDP socket state (🟢 Active / 🔴 Inactive) and registration status
+- Three-state UDP indicator: 🔴 **No socket** (bind failed) · 🟡 **Waiting for signal** (socket open, no packet yet) · 🟢 **Receiving** (at least one packet received) – semantically correct for connectionless UDP
 - Last RX timestamp, sender callsign, RSSI / SNR with colour coding
 - TX counter, own callsign, device IP:Port
 - Own GPS position with source label (Node / Browser GPS)
