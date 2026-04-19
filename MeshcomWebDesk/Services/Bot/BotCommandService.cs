@@ -49,7 +49,7 @@ public class BotCommandService
     /// Parses and executes a bot command. Returns the reply text.
     /// The reply may contain {variable} placeholders; callers are responsible for expanding them.
     /// </summary>
-    public async Task<string> ExecuteAsync(string text, string senderCallsign)
+    public async Task<string> ExecuteAsync(string text, string senderCallsign, MeshcomMessage? context = null)
     {
         // Strip the leading "--" or "—" (em dash U+2014, sent by some MeshCom clients / mobile keyboards)
         string body;
@@ -72,7 +72,7 @@ public class BotCommandService
 
         return cmd is null
             ? $"{_lang.T("Unbekannter Befehl", "Unknown command", "Comando sconosciuto", "Comando desconocido")}: --{name}. {_lang.T("Mit --help erhältst Du alle Befehle.", "Use --help to see all commands.", "Usa --help per vedere tutti i comandi.", "Usa --help para ver todos los comandos.")}"
-            : await cmd.ExecuteAsync(args, senderCallsign);
+            : await cmd.ExecuteAsync(args, senderCallsign, context);
     }
 
     private string BuildHelp()

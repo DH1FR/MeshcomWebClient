@@ -283,7 +283,7 @@ public partial class MeshcomUdpService : BackgroundService
                 return;
             }
 
-            var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
+            var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
             reply = ExpandVariables(reply, message.From);
 
             var parts = SplitMessage(reply);
