@@ -294,6 +294,8 @@ h1:focus {
     display: flex;
     flex-direction: column;
     position: relative;
+    width: 100%;
+    overflow: hidden;
 }
 
 /* Quick Text Flyout */
@@ -366,6 +368,9 @@ h1:focus {
     padding: 8px 12px;
     background: #16213e;
     border-top: 1px solid #0f3460;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .send-bar input {
@@ -1172,6 +1177,22 @@ h1:focus {
 
     .send-bar input {
         font-size: 16px; /* prevent iOS zoom */
+        min-width: 0;    /* allow shrinking below intrinsic size */
+    }
+
+    .btn-send {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .btn-quicktext {
+        padding: 8px 8px;
+        font-size: 13px;
+    }
+
+    .char-counter {
+        min-width: 2.8rem;
+        font-size: 10px;
     }
 
     .new-tab-dialog input {
