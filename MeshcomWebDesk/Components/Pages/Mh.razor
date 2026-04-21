@@ -228,6 +228,7 @@
                                         <br />
                                         @($"{s.Longitude.Value:F4}°{(s.Longitude >= 0 ? "E" : "W")}")
                                     </a>
+                                    <span class="mh-locator">@GeoHelper.ToMaidenhead(s.Latitude.Value, s.Longitude.Value)</span>
                                 }
                                 else
                                 {
