@@ -355,7 +355,13 @@
                 <label>@Loc.T("Bakentext", "Beacon Text", "Testo beacon", "Texto de baliza")</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.BeaconText" />
-                    <span class="settings-hint">@Loc.T("{version} wird durch die aktuelle Versionsnummer ersetzt.", "{version} is replaced with the current version number.", "{version} viene sostituito con il numero di versione.", "{version} se reemplaza con el número de versión.")</span>
+                    <span class="settings-hint">
+                        @Loc.T("Unterstützte Variablen:", "Supported variables:", "Variabili supportate:", "Variables disponibles:")
+                        <code>{version}</code>,
+                        <code>{mycall}</code>,
+                        <code>{date}</code>,
+                        <code>{time}</code>
+                    </span>
                 </div>
 
                 <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)", "Intervallo (ore, min. 1)", "Intervalo (horas, mín. 1)")</label>
