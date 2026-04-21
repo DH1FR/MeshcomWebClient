@@ -74,7 +74,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
-- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Schnelltexte**
+- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Quick Texts**
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
@@ -1014,6 +1014,25 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.7.4
+- **feat:** ⚡ **Quick Texts** – configurable one-click text buttons in the send bar; a ⚡ icon opens a flyout panel above the input; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …); variable reference table with live examples in **Settings → ⚡ Quick Texts**; fully multilingual (DE / EN / IT / ES)
+- **feat:** 📻 **MH – Station Card popup** – hovering (desktop) or tapping (mobile) a callsign in the MH list shows a rich popup card with QRZ name/QTH, RSSI/SNR, battery, distance, firmware, last message preview, a **💬 Open Chat** button and a **🔗 aprs.fi** link
+- **feat:** 🔧 **MeshcomLookup – new hardware IDs** – added hw_id `40` (T5-EPAPER / LilyGo T5 E-Paper) and `53` (T-ETH-ELITE / LilyGo T-ETH-Elite S3 + SX1262 Ethernet) from MeshCom-Firmware v4.35p
+- **fix:** 📱 **Send bar overflow on iOS Safari** – added `width:100%`, `max-width:100%`, `min-width:0` through the full flex chain (`app-body` → `meshcom-container` → `upper-pane` → `tab-content`); `tab-bar` overflow-x container no longer breaks parent `overflow:hidden` on iOS
+- **fix:** 📻 **MH Station Card hover gap** – removed 6 px gap between callsign and card (replaced with `::before` bridge element); elevated `z-index` so card appears above subsequent table rows
+
+### v1.7.3
+- **feat:** 🤖 **Bot – `{srctype}` and `{srctype-label}` variables** – connection type (LoRa / UDP/Gateway / Node) available in all template texts
+- **feat:** 🤖 **Bot – `--ping` command** – replies with RSSI, SNR, relay route and receive timestamp; bare `ping` keyword also accepted (case-insensitive)
+- **feat:** 🤖 **Bot – `--echo` command** – echoes back any text after the command
+- **feat:** ⚙️ **Settings – Bot command test** – dry-run preview of any command with optional sender callsign; all `{variable}` placeholders expanded live
+- **fix:** 🤖 **Bot – `{srctype}` partial substitution** – `{srctype-label}` now replaced before `{srctype}` to avoid partial match
+- **fix:** 🤖 **Bot – `LastSrcType` null from older persisted snapshots** – graceful fallback to `"lora"` for stations loaded before the field was introduced
+
+### v1.7.2
+- **feat:** 📻 **MH – per-row delete button** – individual stations can be removed from the MH list with a ✕ button without clearing the whole list
+- **feat:** 📻 **MH – navigate to chat on tab open** – clicking 💬 in the MH list now automatically navigates to the Chat page and activates the newly opened tab
 
 ### v1.7.1
 - **feat:** 🔐 **Encrypted sensitive settings** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are now encrypted in `appsettings.override.json` using the ASP.NET Core Data Protection API (`dp:` prefix); `IPostConfigureOptions<MeshcomSettings>` decrypts them transparently on load; plain-text values in existing files pass through unchanged (backward compatible); keys stored in `DataPath/keys`
