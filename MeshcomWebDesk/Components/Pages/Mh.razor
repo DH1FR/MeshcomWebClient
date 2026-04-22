@@ -159,6 +159,19 @@
                                                 <span class="mh-sc-lbl">📏</span>
                                                 <span>@GeoHelper.FormatDistance(distCard.Value)</span>
                                             }
+                                            @if (s.Latitude.HasValue && s.Longitude.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">QTH</span>
+                                                <span style="font-family:monospace">@GeoHelper.ToMaidenhead(s.Latitude.Value, s.Longitude.Value)</span>
+                                                <span class="mh-sc-lbl">GPS</span>
+                                                <span>
+                                                    <a class="mh-sc-gps" href="@GeoHelper.OsmUrl(s.Latitude.Value, s.Longitude.Value)"
+                                                       target="_blank" rel="noopener" @onclick:stopPropagation="true">
+                                                        @($"{s.Latitude.Value:F4}°{(s.Latitude >= 0 ? "N" : "S")}")
+                                                        @($" {s.Longitude.Value:F4}°{(s.Longitude >= 0 ? "E" : "W")}")
+                                                    </a>
+                                                </span>
+                                            }
                                             @if (!string.IsNullOrEmpty(s.Firmware))
                                             {
                                                 <span class="mh-sc-lbl">FW</span>
@@ -223,6 +236,7 @@
                                         <br />
                                         @($"{s.Longitude.Value:F4}°{(s.Longitude >= 0 ? "E" : "W")}")
                                     </a>
+                                    <span class="mh-locator">@GeoHelper.ToMaidenhead(s.Latitude.Value, s.Longitude.Value)</span>
                                 }
                                 else
                                 {

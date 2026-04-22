@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @using MeshcomWebDesk.Helpers
@@ -22,6 +22,8 @@
             @foreach (var tab in _tabs)
             {
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
+                        draggable="true"
+                        data-tab-key="@tab.Key"
                         @onclick="() => SelectTab(tab.Key)"
                         title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : null)">
                     <span class="tab-label-wrap">
@@ -59,7 +61,11 @@
                     @foreach (var msg in _activeTabMessages)
                     {
                         <div class="message @(msg.IsOutgoing ? "msg-out" : "msg-in")">
-                            <span class="msg-time">@LT(msg.Timestamp).ToString("HH:mm:ss")</span>
+                            <span class="msg-time">
+                                @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
+                                @msgTs.ToString("HH:mm:ss")
+                                @if (msgDate != null) { <span class="ts-date">@msgDate</span> }
+                            </span>
                             @if (msg.IsOutgoing)
                             {
                                 <span class="msg-call">@_myCallsign:</span>
@@ -101,11 +107,12 @@
                 <span class="mon-filter-icon">🔍</span>
                 <input class="mon-filter-input"
                        value="@_monitorFilter"
-                       @oninput="e => _monitorFilter = e.Value?.ToString() ?? string.Empty"
+                       @oninput="OnMonitorFilterInput"
+                       @onkeydown="OnMonitorFilterKeyDown"
                        placeholder="@Loc.T("Rufzeichen oder Text…", "Callsign or text…", "Nominativo o testo…", "Indicativo o texto…")" />
                 @if (!string.IsNullOrEmpty(_monitorFilter))
                 {
-                    <button class="mon-filter-clear" @onclick="() => _monitorFilter = string.Empty" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
+                    <button class="mon-filter-clear" @onclick="ClearMonitorFilter" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
                 }
             </span>
             <span class="msg-count">
@@ -115,7 +122,7 @@
                 }
                 else
                 {
-                    @($"{_filteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                    @($"{_cachedFilteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
                 }
             </span>
             <button class="mon-toggle-btn" @onclick="ToggleMonitorAsync"
@@ -124,10 +131,14 @@
             </button>
         </div>
         <div class="mon-list" id="raw-messages">
-            @foreach (var m in _filteredMessages)
+            @foreach (var m in _cachedFilteredMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
-                    <span class="mon-time" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
+                    @{ var monTs = LT(m.Timestamp); var monDate = TsDate(monTs); }
+                    <span class="mon-time @(monDate != null ? "mon-time-dated" : "")" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">
+                        @monTs.ToString("HH:mm:ss")
+                        @if (monDate != null) { <span class="ts-date">@monDate</span> }
+                    </span>
 
                     <span class="mon-badge @MonBadgeClass(m)">@MonType(m)</span>
 
@@ -351,6 +362,10 @@
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
     private string _monitorFilter = string.Empty;
+    private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
+    private CancellationTokenSource? _filterDebounce;
+    private List<string> _tabOrder = [];
+    private DotNetObjectReference<Chat>? _dotNetRef;
 
     private IReadOnlyList<MeshcomMessage> _filteredMessages =>
         string.IsNullOrWhiteSpace(_monitorFilter)
@@ -361,6 +376,53 @@
                 Contains(m.Text,    _monitorFilter) ||
                 Contains(m.RawData, _monitorFilter))
               .ToList();
+
+    private void RebuildFilterCache()
+    {
+        _cachedFilteredMessages = _filteredMessages;
+    }
+
+    private async Task OnMonitorFilterInput(ChangeEventArgs e)
+    {
+        _monitorFilter = e.Value?.ToString() ?? string.Empty;
+
+        // Empty field: apply immediately without debounce
+        if (string.IsNullOrEmpty(_monitorFilter))
+        {
+            _filterDebounce?.Cancel();
+            RebuildFilterCache();
+            return;
+        }
+
+        // Cancel any pending debounce
+        _filterDebounce?.Cancel();
+        _filterDebounce = new CancellationTokenSource();
+        var token = _filterDebounce.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            RebuildFilterCache();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void OnMonitorFilterKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _filterDebounce?.Cancel();
+            RebuildFilterCache();
+            StateHasChanged();
+        }
+    }
+
+    private void ClearMonitorFilter()
+    {
+        _filterDebounce?.Cancel();
+        _monitorFilter = string.Empty;
+        RebuildFilterCache();
+    }
 
     private static bool Contains(string? value, string filter) =>
         !string.IsNullOrEmpty(value) &&
@@ -432,6 +494,24 @@
             }
             catch (JSException) { }
 
+            // Restore saved tab order
+            try
+            {
+                var order = await JS.InvokeAsync<string[]?>("meshcomChat.getTabOrder");
+                if (order != null && order.Length > 0)
+                {
+                    _tabOrder = [.. order];
+                    ApplyTabOrder();
+                    needsRender = true;
+                }
+            }
+            catch (JSException) { }
+
+            // Initialize tab drag-and-drop
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            try { await JS.InvokeVoidAsync("meshcomChat.initTabDrag", _dotNetRef); }
+            catch (JSException) { }
+
             if (await LoadQrzDataAsync())
                 needsRender = true;
 
@@ -500,7 +580,9 @@
     private void RefreshData()
     {
         _tabs = ChatService.Tabs.ToList();
+        ApplyTabOrder();
         _allMessages = ChatService.AllMessages;
+        RebuildFilterCache();
 
         // If active tab was closed, select first available
         if (!string.IsNullOrEmpty(_activeTabKey))
@@ -576,6 +658,8 @@
     private void CloseTab(string key)
     {
         ChatService.CloseTab(key);
+        if (_tabOrder.Remove(key))
+            _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
         if (_activeTabKey == key)
         {
             _activeTabKey = string.Empty;
@@ -678,10 +762,39 @@
     public void Dispose()
     {
         _disposed = true;
+        _dotNetRef?.Dispose();
         Loc.OnChange -= StateHasChanged;
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
+    }
+
+    private void ApplyTabOrder()
+    {
+        if (_tabOrder.Count == 0) return;
+        _tabs = _tabs
+            .OrderBy(t =>
+            {
+                var idx = _tabOrder.IndexOf(t.Key);
+                return idx < 0 ? int.MaxValue : idx;
+            })
+            .ToList();
+    }
+
+    [JSInvokable]
+    public void MoveTab(string fromKey, string toKey)
+    {
+        if (string.IsNullOrEmpty(fromKey) || string.IsNullOrEmpty(toKey) || fromKey == toKey)
+            return;
+        var fromIdx = _tabs.FindIndex(t => t.Key == fromKey);
+        var toIdx   = _tabs.FindIndex(t => t.Key == toKey);
+        if (fromIdx < 0 || toIdx < 0) return;
+        var tab = _tabs[fromIdx];
+        _tabs.RemoveAt(fromIdx);
+        _tabs.Insert(toIdx, tab);
+        _tabOrder = _tabs.Select(t => t.Key).ToList();
+        _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
+        StateHasChanged();
     }
 
     private async void HandleWatchlistHit(string callsign, MeshcomMessage message)
@@ -868,4 +981,11 @@
             : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
+
+    /// <summary>
+    /// Returns the date prefix "dd.MM." when <paramref name="dt"/> is not today, otherwise null.
+    /// Used to show a compact date line above the time only for older entries.
+    /// </summary>
+    private static string? TsDate(DateTime dt) =>
+        dt.Date == DateTime.Today ? null : dt.ToString("dd.MM.yy");
 }

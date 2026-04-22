@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace MeshcomWebDesk.Helpers;
 
 /// <summary>
@@ -35,12 +37,12 @@ public static class GeoHelper
         if (lat is null || lon is null) return "–";
         var ns = lat.Value >= 0 ? "N" : "S";
         var ew = lon.Value >= 0 ? "E" : "W";
-        return $"{Math.Abs(lat.Value):F5}°{ns} {Math.Abs(lon.Value):F5}°{ew}";
+        return $"{Math.Abs(lat.Value).ToString("F5", CultureInfo.InvariantCulture)}°{ns} {Math.Abs(lon.Value).ToString("F5", CultureInfo.InvariantCulture)}°{ew}";
     }
 
     /// <summary>OpenStreetMap URL for a single coordinate.</summary>
     public static string OsmUrl(double lat, double lon) =>
-        $"https://www.openstreetmap.org/?mlat={lat:F6}&mlon={lon:F6}&zoom=12";
+        $"https://www.openstreetmap.org/?mlat={lat.ToString("F6", CultureInfo.InvariantCulture)}&mlon={lon.ToString("F6", CultureInfo.InvariantCulture)}&zoom=12";
 
     /// <summary>
     /// Converts decimal-degree coordinates to a Maidenhead (QTH) locator.
