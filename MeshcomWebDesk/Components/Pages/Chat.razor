@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @using MeshcomWebDesk.Helpers
@@ -121,7 +121,7 @@
                 }
                 else
                 {
-                    @($"{_filteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                    @($"{_cachedFilteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
                 }
             </span>
             <button class="mon-toggle-btn" @onclick="ToggleMonitorAsync"
@@ -130,7 +130,7 @@
             </button>
         </div>
         <div class="mon-list" id="raw-messages">
-            @foreach (var m in _filteredMessages)
+            @foreach (var m in _cachedFilteredMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
                     @{ var monTs = LT(m.Timestamp); var monDate = TsDate(monTs); }
@@ -361,6 +361,8 @@
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
     private string _monitorFilter = string.Empty;
+    private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
+    private CancellationTokenSource? _filterDebounce;
     private List<string> _tabOrder = [];
     private DotNetObjectReference<Chat>? _dotNetRef;
 
@@ -373,6 +375,34 @@
                 Contains(m.Text,    _monitorFilter) ||
                 Contains(m.RawData, _monitorFilter))
               .ToList();
+
+    private void RebuildFilterCache()
+    {
+        _cachedFilteredMessages = _filteredMessages;
+    }
+
+    private async Task OnMonitorFilterInput(ChangeEventArgs e)
+    {
+        _monitorFilter = e.Value?.ToString() ?? string.Empty;
+        // Cancel any pending debounce
+        _filterDebounce?.Cancel();
+        _filterDebounce = new CancellationTokenSource();
+        var token = _filterDebounce.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            RebuildFilterCache();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void ClearMonitorFilter()
+    {
+        _filterDebounce?.Cancel();
+        _monitorFilter = string.Empty;
+        RebuildFilterCache();
+    }
 
     private static bool Contains(string? value, string filter) =>
         !string.IsNullOrEmpty(value) &&
@@ -532,6 +562,7 @@
         _tabs = ChatService.Tabs.ToList();
         ApplyTabOrder();
         _allMessages = ChatService.AllMessages;
+        RebuildFilterCache();
 
         // If active tab was closed, select first available
         if (!string.IsNullOrEmpty(_activeTabKey))
