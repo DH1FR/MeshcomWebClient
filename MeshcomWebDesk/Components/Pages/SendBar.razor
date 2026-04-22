@@ -7,10 +7,13 @@
 <div class="send-bar-wrap">
     @if (_flyoutOpen && _quickTexts.Count > 0)
     {
-        <div class="quicktext-flyout">
-            @foreach (var qt in _quickTexts)
+        <div class="quicktext-flyout" id="qt-flyout">
+            @for (var i = 0; i < _quickTexts.Count; i++)
             {
-                <button class="quicktext-btn" @onclick="() => LoadQuickText(qt.Text)" title="@qt.Text">
+                var idx = i;
+                var qt = _quickTexts[i];
+                <button class="quicktext-btn" draggable="true" data-qt-idx="@idx"
+                        @onclick="() => LoadQuickText(qt.Text)" title="@qt.Text">
                     @qt.Label
                 </button>
             }
@@ -37,6 +40,7 @@
 </div>
 
 @implements IDisposable
+@inject IJSRuntime JS
 
 @code {
     [Parameter, EditorRequired] public EventCallback<string> OnSend { get; set; }
@@ -49,6 +53,7 @@
     private bool   _flyoutOpen;
     private List<QuickTextEntry> _quickTexts = [];
     private const int MaxLength = 149;
+    private DotNetObjectReference<SendBar>? _dotNetRef;
 
     private bool CanSend =>
         !string.IsNullOrWhiteSpace(_text) && _text.Length <= MaxLength;
@@ -67,13 +72,64 @@
         SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(StateHasChanged); });
     }
 
-    public void Dispose() => Loc.OnChange -= StateHasChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_flyoutOpen && _quickTexts.Count > 0)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("meshcomChat.initQuickTextDrag", _dotNetRef);
+        }
+    }
+
+    public void Dispose()
+    {
+        Loc.OnChange -= StateHasChanged;
+        _dotNetRef?.Dispose();
+    }
 
     private void LoadQuickTextsFromSettings()
     {
         _quickTexts = SettingsMonitor.CurrentValue.QuickTexts
             .Where(q => !string.IsNullOrWhiteSpace(q.Label) && !string.IsNullOrWhiteSpace(q.Text))
             .ToList();
+    }
+
+    [JSInvokable]
+    public async Task MoveQuickText(int fromIdx, int toIdx)
+    {
+        if (fromIdx < 0 || fromIdx >= _quickTexts.Count || toIdx < 0 || toIdx >= _quickTexts.Count || fromIdx == toIdx)
+            return;
+
+        // Reorder in-memory list
+        var item = _quickTexts[fromIdx];
+        _quickTexts.RemoveAt(fromIdx);
+        _quickTexts.Insert(toIdx, item);
+
+        // Persist: update the settings QuickTexts with new order
+        var settings = SettingsMonitor.CurrentValue;
+        var fullList = settings.QuickTexts;
+
+        // Rebuild the full list preserving empty/invalid entries at their positions
+        // but reordering the valid ones
+        var validEntries = fullList.Where(q => !string.IsNullOrWhiteSpace(q.Label) && !string.IsNullOrWhiteSpace(q.Text)).ToList();
+        if (fromIdx < validEntries.Count && toIdx < validEntries.Count)
+        {
+            var entry = validEntries[fromIdx];
+            validEntries.RemoveAt(fromIdx);
+            validEntries.Insert(toIdx, entry);
+
+            // Replace valid entries in the full list
+            var vi = 0;
+            for (var i = 0; i < fullList.Count && vi < validEntries.Count; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(fullList[i].Label) && !string.IsNullOrWhiteSpace(fullList[i].Text))
+                {
+                    fullList[i] = validEntries[vi++];
+                }
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ToggleFlyout() => _flyoutOpen = !_flyoutOpen;
