@@ -75,11 +75,14 @@ and makes a full web client for MeshCom available via a simple URL
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
 - **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Quick Texts**
+- **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
+- **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
 - **QTH Locator** – Maidenhead locator (e.g. `JN48QN`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
+- **Station card popup** – hovering (desktop) or tapping (mobile) a callsign shows a rich card with QRZ name/QTH, RSSI/SNR, battery, distance, QTH locator, GPS coordinates (as OSM link) and firmware; buttons: **💬 Open Chat** and **🔗 aprs.fi**
 - **Distance calculation** (Haversine) from own position to each heard station
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
 - **Hardware badge** – short hardware name from `hw_id` field (e.g. `T-BEAM`, `T-ECHO`, `HELTEC-V3`, `T-ETH-ELITE`)
@@ -101,7 +104,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
 - **Resizable**: drag the divider bar between chat and monitor to adjust the split – last position is saved in `localStorage` and restored on the next visit
 - Collapsible on mobile (toggle button)
-- **Live filter** 🔍 in the monitor title bar – type any callsign or text fragment to instantly show only matching rows; the entry counter switches to `X / Y Entries` while a filter is active; clear with the × button
+- **Live filter** 🔍 in the monitor title bar – type any callsign or text fragment to instantly show only matching rows; press **Enter** to apply immediately; the entry counter switches to `X / Y Entries` while a filter is active; clear with the × button or delete all text; filter results are cached and only recomputed on change (debounced 250 ms)
 
 ### 📊 Status bar
 - Three-state UDP indicator: 🔴 **No socket** (bind failed) · 🟡 **Waiting for signal** (socket open, no packet yet) · 🟢 **Receiving** (at least one packet received) – semantically correct for connectionless UDP
@@ -174,7 +177,7 @@ and makes a full web client for MeshCom available via a simple URL
   | `--ping` | `Pong! 👋 <callsign> \| RSSI: -87 dBm, SNR: 6.5 dB \| Route (2 hops): OE1XAR-62,DB0TAW-13 \| Received: 14:32:07` |
   | `--echo <text>` | Echoes `<text>` back to the sender |
 
-- **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping` – useful for clients that do not support the `--` prefix
+- **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
   - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …)
@@ -230,7 +233,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Interactive map at `/map` powered by **Leaflet.js + OpenStreetMap**
 - **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
 - **Own position** shown as gold diamond ◆ (APRS convention)
-- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude, and a direct **🔗 aprs.fi link** (opens station info page in new tab)
+- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude, **QTH locator**, **GPS coordinates** (as clickable OSM link) and a direct **🔗 aprs.fi link** (opens station info page in new tab)
 - **Callsign search** 🔍 – search field in the control bar; press Enter or click the button to jump directly to the station and open its popup; shows „Not found" if no match
 - **First open**: map automatically zooms to a **50 km radius** around own position (once own GPS is known)
 - **View persistence**: last map position and zoom level are saved in `localStorage` and restored on every subsequent visit
@@ -1015,6 +1018,16 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.7.5
+- **feat:** 💬 **Draggable chat tabs** – tabs can be reordered by drag & drop; order persisted in `localStorage`
+- **feat:** 📻 **MH – QTH Locator** – Maidenhead locator (`JN48QN`) shown below GPS coordinates in the MH table; also in the station card popup (with clickable OSM link for GPS coordinates)
+- **feat:** 🗺️ **Map popup – GPS & QTH Locator** – station popup now shows QTH locator and GPS coordinates as a clickable OSM link
+- **feat:** 🔧 **`{locator}` variable** – QTH locator of the chat partner available in Auto-Reply, Bot commands and Quick Texts
+- **feat:** ⚙️ **Beacon variables hint** – all supported placeholders (`{version}`, `{mycall}`, `{date}`, `{time}`) shown inline below the beacon text field
+- **feat:** 💬 **Timestamps** – date (`dd.MM.yy`) shown below time for messages not from today; row height unchanged
+- **perf:** 📡 **Monitor filter debounce** – filter input debounced (250 ms); Enter applies immediately; clearing the field resets instantly; results cached
+- **fix:** 🌍 **InvariantCulture for coordinates and InfluxDB** – `OsmUrl`, `FormatCoord` and all InfluxDB Line Protocol float fields now use `.` as decimal separator regardless of system locale
 
 ### v1.7.4
 - **feat:** ⚡ **Quick Texts** – configurable one-click text buttons in the send bar; a ⚡ icon opens a flyout panel above the input; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …); variable reference table with live examples in **Settings → ⚡ Quick Texts**; fully multilingual (DE / EN / IT / ES)
