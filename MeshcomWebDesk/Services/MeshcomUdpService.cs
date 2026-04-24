@@ -276,13 +276,18 @@ public partial class MeshcomUdpService : BackgroundService
 
     /// <summary>
     /// Returns the normalised chat-tab key for a group setting value.
-    /// Ensures the '#' prefix is present and lowercases the result for
-    /// consistent monitor display. The tab dictionary uses OrdinalIgnoreCase
-    /// so casing never affects lookup.
-    /// e.g. "alle" → "#alle";  "#Alle" → "#alle";  "#262" → "#262".
+    /// Broadcast synonyms ("alle", "#alle", "*") are mapped to the "*" tab key
+    /// so beacon messages appear in the shared "Alle" broadcast tab.
+    /// All other groups get the '#' prefix and are lowercased for consistent display.
+    /// e.g. "alle" → "*";  "#Alle" → "*";  "*" → "*";  "#262" → "#262".
     /// </summary>
     private static string ResolveTabKey(string group)
-        => (group.StartsWith('#') ? group : "#" + group).ToLowerInvariant();
+    {
+        var stripped = group.TrimStart('#');
+        if (stripped.Equals("alle", StringComparison.OrdinalIgnoreCase) || stripped == "*")
+            return "*";
+        return ("#" + stripped).ToLowerInvariant();
+    }
 
     private Task SendAutoReplyAsync(string callsign)
     {
