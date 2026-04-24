@@ -274,6 +274,15 @@ public partial class MeshcomUdpService : BackgroundService
         return stripped.Equals("alle", StringComparison.OrdinalIgnoreCase) ? "*" : stripped;
     }
 
+    /// <summary>
+    /// Returns the normalised chat-tab key for a group setting value.
+    /// Ensures the '#' prefix is present; does not change casing
+    /// (the tab dictionary uses OrdinalIgnoreCase matching).
+    /// e.g. "alle" → "#alle";  "#Alle" → "#Alle";  "262" → "#262".
+    /// </summary>
+    private static string ResolveTabKey(string group)
+        => group.StartsWith('#') ? group : "#" + group;
+
     private Task SendAutoReplyAsync(string callsign)
     {
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
@@ -454,12 +463,13 @@ public partial class MeshcomUdpService : BackgroundService
                 continue;
 
             var destination = ResolveDestination(s.BeaconGroup);
+            var beaconTabKey = ResolveTabKey(s.BeaconGroup);
             var beaconText  = ExpandVariables(s.BeaconText);
             var parts       = SplitMessage(beaconText);
             _logger.LogInformation("Sending beacon to {Group} ({Parts} part(s))", s.BeaconGroup, parts.Count);
             for (var i = 0; i < parts.Count; i++)
             {
-                await SendMessageAsync(destination, parts[i], s.BeaconGroup);
+                await SendMessageAsync(destination, parts[i], beaconTabKey);
                 if (i < parts.Count - 1)
                     await Task.Delay(TimeSpan.FromSeconds(2));
             }
@@ -565,12 +575,13 @@ public partial class MeshcomUdpService : BackgroundService
             throw new InvalidOperationException("Kein Bakentext konfiguriert.");
 
         var destination = ResolveDestination(s.BeaconGroup);
+        var beaconTabKey = ResolveTabKey(s.BeaconGroup);
         var beaconText  = ExpandVariables(s.BeaconText);
         var parts       = SplitMessage(beaconText);
         _logger.LogInformation("Beacon test send to {Group} ({Parts} part(s)): {Text}", s.BeaconGroup, parts.Count, beaconText);
         for (var i = 0; i < parts.Count; i++)
         {
-            await SendMessageAsync(destination, parts[i], s.BeaconGroup);
+            await SendMessageAsync(destination, parts[i], beaconTabKey);
             if (i < parts.Count - 1)
                 await Task.Delay(TimeSpan.FromSeconds(2));
         }
@@ -770,9 +781,8 @@ public partial class MeshcomUdpService : BackgroundService
             // Therefore ⏳ → ✓ via node-echo is impossible for any message type.
             // Mark all outgoing messages as "transmitted" immediately (✓).
             // Direct messages may still reach ✓✓ when the recipient sends an APRS ACK.
-            // Normalize the tab key to UpperInvariant so it always matches the tab key
-            // created by the UI (which uses ToUpperInvariant for all tab keys).
-            var resolvedTabKey = (tabKey ?? destination).ToUpperInvariant();
+            // Pass the tab key as-is; ChatService._tabs uses OrdinalIgnoreCase so casing does not matter.
+            var resolvedTabKey = tabKey ?? destination;
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
                 From           = _settings.MyCallsign,
