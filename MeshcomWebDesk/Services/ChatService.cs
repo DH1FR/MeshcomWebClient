@@ -428,13 +428,14 @@ public class ChatService
     }
 
     /// <summary>
-    /// Returns the group label entry for a group tab key (e.g. "#262" → entry for "262"),
-    /// or null if no label is configured for that group.
+    /// Returns the group label entry for a group number or tab key.
+    /// Accepts both "#262" (tab key) and "262" (raw wire value) formats.
+    /// Returns null if no label is configured for that group.
     /// </summary>
     public GroupLabelEntry? GetGroupLabel(string tabKey)
     {
-        if (!tabKey.StartsWith('#')) return null;
         var number = tabKey.TrimStart('#');
+        if (string.IsNullOrEmpty(number)) return null;
         return _settings.GroupLabels.FirstOrDefault(g =>
             string.Equals(g.Group, number, StringComparison.OrdinalIgnoreCase));
     }

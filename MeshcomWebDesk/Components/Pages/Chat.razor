@@ -187,9 +187,10 @@
                                 }
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    var grpLabel = m.To.StartsWith('#') ? ChatService.GetGroupLabel(m.To) : null;
+                                    var grpLabel = ChatService.GetGroupLabel(m.To);
+                                    var destDisplay = FormatDest(m.To);
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@m.To@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
+                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@destDisplay@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
                                 }
                                 else
                                 {
@@ -722,6 +723,17 @@
         var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
         var tabKey = isBroadcast ? "*" : _activeTab.Key;
         await UdpService.SendMessageAsync(destination, text, tabKey);
+    }
+
+    /// <summary>Formats a message destination for display in the monitor.
+    /// Pure numbers are treated as group numbers and get a '#' prefix.
+    /// Broadcast (*) and callsigns are returned as-is.</summary>
+    private static string FormatDest(string to)
+    {
+        if (string.IsNullOrEmpty(to) || to == "*") return to;
+        if (to.StartsWith('#')) return to;
+        if (to.All(char.IsDigit)) return "#" + to;
+        return to;
     }
 
     private string QrzSuffix(string callsign)
