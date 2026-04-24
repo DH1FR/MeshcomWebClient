@@ -770,10 +770,13 @@ public partial class MeshcomUdpService : BackgroundService
             // Therefore ⏳ → ✓ via node-echo is impossible for any message type.
             // Mark all outgoing messages as "transmitted" immediately (✓).
             // Direct messages may still reach ✓✓ when the recipient sends an APRS ACK.
+            // Normalize the tab key to UpperInvariant so it always matches the tab key
+            // created by the UI (which uses ToUpperInvariant for all tab keys).
+            var resolvedTabKey = (tabKey ?? destination).ToUpperInvariant();
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
                 From           = _settings.MyCallsign,
-                To             = tabKey ?? destination,
+                To             = resolvedTabKey,
                 Text           = text,
                 IsOutgoing     = true,
                 RawData        = json,
