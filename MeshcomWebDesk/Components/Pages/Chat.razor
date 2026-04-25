@@ -293,52 +293,54 @@
             @(_soundEnabled ? "🔔" : "🔕")
         </button>
         <span class="status-sep">|</span>
-        <span class="status-item @UdpStatusCss">
-            @UdpStatusIcon <span class="status-label">UDP @UdpStatusLabel</span>
+        <span class="status-item" title="UDP @UdpStatusLabel">
+            <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP @UdpStatusLabel</span>
         </span>
         <span class="status-sep status-detail">|</span>
-        <span class="status-item status-detail">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+        <span class="status-item status-detail">
+            <span class="status-badge status-badge-neutral">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+        </span>
         <span class="status-sep">|</span>
-        <span class="status-item">🎙️ @_myCallsign</span>
+        <span class="status-item">
+            <span class="status-badge status-badge-neutral">🎙️ @_myCallsign</span>
+        </span>
         <span class="status-sep status-detail">|</span>
-        <span class="status-item status-detail">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        <span class="status-item status-detail">
+            <span class="status-badge status-badge-neutral">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        </span>
         @if (_status.BeaconActive)
         {
             <span class="status-sep status-detail">|</span>
             <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h", $"Beacon attivo · Gruppo {_settings.BeaconGroup} · ogni {_settings.BeaconIntervalHours} h", $"Baliza activa · Grupo {_settings.BeaconGroup} · cada {_settings.BeaconIntervalHours} h")">
-                <span class="beacon-dot">●</span> @Loc.T("Bake", "Beacon", "Beacon", "Baliza")
-                @if (_status.BeaconNextSend.HasValue)
-                {
-                    <span class="@BeaconTimeCss(_status.BeaconNextSend.Value)"> · @_status.BeaconNextSend.Value.ToString("HH:mm")</span>
-                }
+                <span class="status-badge status-badge-warn">●&nbsp;@Loc.T("Bake", "Beacon", "Beacon", "Baliza")@if (_status.BeaconNextSend.HasValue) {<text>&nbsp;·&nbsp;@_status.BeaconNextSend.Value.ToString("HH:mm")</text>}</span>
             </span>
         }
         @if (_status.LastRxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
+            <span class="status-item status-detail">
+                <span class="status-badge status-badge-neutral">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
+            </span>
         }
         @if (_status.LastRssi.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail @RssiCssClass(_status.LastRssi.Value)">
-                📶 RSSI @_status.LastRssi dBm&nbsp;&nbsp;SNR @_status.LastSnr?.ToString("F1") dB
+            <span class="status-item status-detail">
+                <span class="status-badge @RssiStatusBadgeCss(_status.LastRssi.Value)">📶 RSSI @_status.LastRssi dBm&nbsp;·&nbsp;SNR @_status.LastSnr?.ToString("F1") dB</span>
             </span>
         }
         @if (_status.LastTxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">📤 @LT(_status.LastTxTime.Value).ToString("HH:mm:ss")</span>
+            <span class="status-item status-detail">
+                <span class="status-badge status-badge-neutral">📤 @LT(_status.LastTxTime.Value).ToString("HH:mm:ss")</span>
+            </span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail status-ok">
-                📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)
-                @if (_status.OwnAltitude.HasValue)
-                {
-                    <span class="status-pos-alt">&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</span>
-                }
+            <span class="status-item status-detail">
+                <span class="status-badge status-badge-info">📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)@if (_status.OwnAltitude.HasValue) {<text>&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</text>}</span>
             </span>
         }
         @if (MonitorSink.IsEnabled)
@@ -1011,11 +1013,22 @@
         : _status.HasReceivedData ? "🟢"
         : "🟡";
 
+    private string UdpStatusBadgeCss => !_status.IsListening ? "status-badge-err"
+        : _status.HasReceivedData ? "status-badge-ok"
+        : "status-badge-warn";
+
     private string UdpStatusLabel => !_status.IsListening
         ? Loc.T("Kein Socket", "No socket", "Nessun socket", "Sin socket")
         : _status.HasReceivedData
             ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
             : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
+
+    private static string RssiStatusBadgeCss(int rssi) => rssi switch
+    {
+        > -70 => "status-badge-ok",
+        > -90 => "status-badge-warn",
+        _     => "status-badge-err"
+    };
 
     private string DbStatusIcon       => MonitorSink.LastWriteOk == null ? "🟡"
         : MonitorSink.LastWriteOk.Value ? "🟢" : "🔴";
