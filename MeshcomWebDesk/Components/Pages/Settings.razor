@@ -840,6 +840,15 @@
                         <span style="font-family:sans-serif;font-size:0.75rem;color:#5a7a9a">@Loc.T("Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }")</span>
                     </div>
                 }
+
+                <label>
+                    @Loc.T("Aktivitäten loggen", "Log Activity", "Registra attività", "Registrar actividad")<br />
+                    <small>@Loc.T("Jedes Publish und eingehende Send-Topic wird in die Log-Datei geschrieben.", "Every publish and incoming send-topic is written to the log file.", "Ogni publish e send-topic in arrivo viene scritto nel log.", "Cada publish y send-topic entrante se escribe en el log.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttLogRequests" />
+                    <span>@(_model.MqttLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
             </div>
         </div>
 
@@ -1454,6 +1463,7 @@
             MqttPublishPosition     = s.Mqtt.PublishPosition,
             MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
             MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
+            MqttLogRequests         = s.Mqtt.LogRequests,
             QrzEnabled              = s.Qrz.Enabled,
             QrzUsername             = s.Qrz.Username,
             QrzPassword             = s.Qrz.Password,
@@ -1553,6 +1563,7 @@
         public bool   MqttPublishPosition  { get; set; }
         public bool   MqttPublishTelemetry { get; set; }
         public bool   MqttSubscribeEnabled { get; set; }
+        public bool   MqttLogRequests       { get; set; }
 
         // QRZ.com
         public bool   QrzEnabled         { get; set; }
@@ -1642,7 +1653,8 @@
                 PublishMessage   = MqttPublishMessage,
                 PublishPosition  = MqttPublishPosition,
                 PublishTelemetry = MqttPublishTelemetry,
-                SubscribeEnabled = MqttSubscribeEnabled
+                SubscribeEnabled = MqttSubscribeEnabled,
+                LogRequests      = MqttLogRequests
             },
             Qrz = new MeshcomWebDesk.Models.QrzSettings
             {

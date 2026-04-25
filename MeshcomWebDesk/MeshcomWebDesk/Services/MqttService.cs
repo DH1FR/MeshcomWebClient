@@ -138,7 +138,10 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
                 .Build();
 
             await _client.PublishAsync(message);
-            _logger.LogDebug("MQTT [{Event}] → {Topic}", eventType, topic);
+            if (cfg.LogRequests)
+                _logger.LogInformation("MQTT [{Event}] → {Topic}", eventType, topic);
+            else
+                _logger.LogDebug("MQTT [{Event}] → {Topic}", eventType, topic);
         }
         catch (Exception ex)
         {
@@ -256,7 +259,10 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         var callsign = destination.StartsWith('#') || destination == "*" ? null : destination;
         text = _expander.ExpandVariables(text, callsign);
 
-        _logger.LogInformation("MQTT → MeshCom send to {Dest}: {Text}", destination, text);
+        if (cfg.LogRequests)
+            _logger.LogInformation("MQTT → MeshCom send to {Dest}: {Text}", destination, text);
+        else
+            _logger.LogDebug("MQTT → MeshCom send to {Dest}: {Text}", destination, text);
         await _sender.SendMessageAsync(destination, text);
     }
 

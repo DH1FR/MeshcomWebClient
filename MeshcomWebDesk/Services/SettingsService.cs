@@ -121,7 +121,8 @@ public class SettingsService
                     ["PublishMessage"]   = s.Mqtt.PublishMessage,
                     ["PublishPosition"]  = s.Mqtt.PublishPosition,
                     ["PublishTelemetry"] = s.Mqtt.PublishTelemetry,
-                    ["SubscribeEnabled"] = s.Mqtt.SubscribeEnabled
+                    ["SubscribeEnabled"] = s.Mqtt.SubscribeEnabled,
+                    ["LogRequests"]      = s.Mqtt.LogRequests
                 },
                 ["Qrz"] = new JsonObject
                 {

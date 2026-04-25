@@ -24,4 +24,7 @@ public class MqttSettings
     // --- Subscriber ---
     /// <summary>When true, subscribes to send-topics and forwards them as outgoing UDP messages.</summary>
     public bool SubscribeEnabled { get; set; } = false;
+
+    /// <summary>When true, every MQTT publish and received send-command is logged at Information level.</summary>
+    public bool LogRequests { get; set; } = false;
 }
