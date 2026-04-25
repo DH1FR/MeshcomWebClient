@@ -293,8 +293,8 @@
             <span class="status-badge @(_soundEnabled ? "status-badge-neutral" : "status-badge-err")">@(_soundEnabled ? "🔔" : "🔕")</span>
         </button>
         <span class="status-sep">|</span>
-        <span class="status-item" title="UDP @UdpStatusLabel">
-            <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP @UdpStatusLabel</span>
+        <span class="status-item" title="@UdpStatusTooltip">
+            <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP</span>
         </span>
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">
@@ -1022,6 +1022,12 @@
         : _status.HasReceivedData
             ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
             : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
+
+    private string UdpStatusTooltip => !_status.IsListening
+        ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open", "UDP: Nessun socket – porta non aperta", "UDP: Sin socket – puerto no abierto")
+        : _status.HasReceivedData
+            ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK", "UDP: Ricezione OK", "UDP: Recibiendo OK")
+            : Loc.T("UDP: Warte auf Signal", "UDP: Waiting for signal", "UDP: Attesa segnale", "UDP: Esperando señal");
 
     private static string RssiStatusBadgeCss(int rssi) => rssi switch
     {
