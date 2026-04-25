@@ -162,7 +162,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
 - Enabled / disabled via `AutoReplyEnabled` – applies **live** without restart
 - **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`  
-  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.7.6 – QTH: JN48QN`
+  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.8.0 – QTH: JN48QN`
 - **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
 
 ### 🤖 Bot – Remote commands via direct message
@@ -1070,6 +1070,9 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.8.0
+- **release:** 🚀 Version 1.8.0
 
 ### v1.7.7
 - **feat:** 📡 **MQTT integration (Beta)** – optional connection to an external MQTT broker; publishes incoming chat messages, position beacons and telemetry to typed topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optional subscriber forwards `{prefix}/send/#` topics as outgoing UDP messages; supports authentication, TLS and auto-reconnect; all `{variable}` placeholders expanded in subscriber payloads
