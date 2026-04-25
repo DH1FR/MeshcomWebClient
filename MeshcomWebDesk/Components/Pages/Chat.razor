@@ -290,7 +290,7 @@
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
                 @onclick="() => _soundEnabled = !_soundEnabled"
                 title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound", "Disattiva audio", "Silenciar") : Loc.T("Ton einschalten", "Unmute sound", "Attiva audio", "Activar sonido"))">
-            @(_soundEnabled ? "🔔" : "🔕")
+            <span class="status-badge @(_soundEnabled ? "status-badge-neutral" : "status-badge-err")">@(_soundEnabled ? "🔔" : "🔕")</span>
         </button>
         <span class="status-sep">|</span>
         <span class="status-item" title="UDP @UdpStatusLabel">
