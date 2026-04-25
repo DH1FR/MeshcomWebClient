@@ -19,6 +19,7 @@ public class ChatService
     private readonly ILogger<ChatService> _logger;
     private readonly IMonitorDataSink _sink;
     private readonly WebhookService   _webhook;
+    private readonly QsoSummaryService _qsoSummary;
     private MqttService?      _mqtt;
 
     /// <summary>
@@ -65,12 +66,13 @@ public class ChatService
     /// </summary>
     public string ActiveTabKey { get; set; } = string.Empty;
 
-    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook)
+    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook, QsoSummaryService qsoSummary)
     {
-        _settings = settings.CurrentValue;
-        _logger   = logger;
-        _sink     = sink;
-        _webhook  = webhook;
+        _settings   = settings.CurrentValue;
+        _logger     = logger;
+        _sink       = sink;
+        _webhook    = webhook;
+        _qsoSummary = qsoSummary;
         settings.OnChange(s => _settings = s);
     }
 
@@ -173,6 +175,10 @@ public class ChatService
         if (wasNewDirect)
             OnNewDirectTab?.Invoke(message.From);
 
+        // Check QSO summary for new direct tabs created by incoming messages
+        if (wasNewDirect && tab != null)
+            _ = CheckQsoSummaryAsync(tab, tabKey);
+
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
         _ = _mqtt.PublishAsync(message, "message");
@@ -223,7 +229,43 @@ public class ChatService
         var tab = GetOrCreateTab(key);
         ActiveTabKey = key;
         NotifyChange();
+
+        // Async fire-and-forget: check if a QSO summary exists for this direct tab
+        if (key != "*" && !key.StartsWith('#'))
+            _ = CheckQsoSummaryAsync(tab, key);
+
         return tab;
+    }
+
+    /// <summary>
+    /// Public entry point so the UI can trigger a QSO summary check
+    /// when a tab is selected that has no icon yet.
+    /// Guards against duplicate concurrent checks via <see cref="ChatTab.QsoSummaryCheckPending"/>.
+    /// </summary>
+    public void TriggerQsoSummaryCheck(ChatTab tab, string callsign)
+    {
+        if (tab.QsoSummaryCheckPending) return;
+        tab.QsoSummaryCheckPending = true;
+        _ = CheckQsoSummaryAsync(tab, callsign);
+    }
+
+    /// <summary>Checks whether a QSO summary exists and sets the flag on the tab.</summary>
+    private async Task CheckQsoSummaryAsync(ChatTab tab, string callsign)
+    {
+        try
+        {
+            var callsignBase = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
+            tab.QsoSummaryCallsignBase = callsignBase;
+            _logger.LogInformation("ChatService: CheckQsoSummaryAsync tab={Tab} callsignBase={Base}", callsign, callsignBase);
+            tab.HasQsoSummary = await _qsoSummary.HasSummaryAsync(callsignBase);
+            _logger.LogInformation("ChatService: CheckQsoSummaryAsync tab={Tab} → HasQsoSummary={Result}", callsign, tab.HasQsoSummary);
+            if (tab.HasQsoSummary)
+                NotifyChange();
+        }
+        finally
+        {
+            tab.QsoSummaryCheckPending = false;
+        }
     }
 
     /// <summary>Close a tab.</summary>
@@ -397,6 +439,10 @@ public class ChatService
                 _mhList[station.Callsign] = station;
         }
         NotifyChange();
+
+        // Async: check QSO summary for all restored direct tabs
+        foreach (var tab in _tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))
+            _ = CheckQsoSummaryAsync(tab, tab.Key);
     }
 
     /// <summary>

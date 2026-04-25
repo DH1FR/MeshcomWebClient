@@ -93,6 +93,7 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
 
 // Register services
+builder.Services.AddSingleton<QsoSummaryService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddSingleton<IBotCommand, VersionCommand>();
 builder.Services.AddSingleton<IBotCommand, TimeCommand>();

@@ -10,6 +10,7 @@
 @inject QrzService QrzService
 @inject IJSRuntime JS
 @inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
+@inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -1072,6 +1073,119 @@
             </div>
         </div>
 
+        <!-- KI / QSO-Zusammenfassung -->
+        <div class="settings-section @(IsOpen("ai") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("ai")'>
+                🤖 @Loc.T("KI / QSO-Zusammenfassung", "AI / QSO Summary", "IA / Riepilogo QSO", "IA / Resumen QSO")
+                <span class="section-chevron">@(IsOpen("ai") ? "▲" : "▼")</span>
+            </h2>
+            <div class="settings-grid">
+                <label>@Loc.T("Aktiviert", "Enabled", "Attivo", "Activo")</label>
+                <label class="toggle-label">
+                    <input type="checkbox" @bind="_model.AiEnabled" />
+                    <span>@(_model.AiEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>@Loc.T("Anbieter", "Provider", "Provider", "Proveedor")</label>
+                <select @bind="_model.AiProvider">
+                    <option value="openai">OpenAI (api.openai.com)</option>
+                    <option value="grok">Grok / xAI (api.x.ai)</option>
+                    <option value="azure">Azure OpenAI (Microsoft)</option>
+                </select>
+
+                <label>API Key</label>
+                <input type="password" @bind="_model.AiApiKey" autocomplete="new-password"
+                       placeholder="@(_model.AiProvider == "grok" ? "xai-..." : _model.AiProvider == "azure" ? "Azure API Key..." : "sk-...")" />
+
+                @if (_model.AiProvider == "azure")
+                {
+                    <label>@Loc.T("Azure Endpoint", "Azure Endpoint", "Azure Endpoint", "Azure Endpoint")</label>
+                    <input type="text" @bind="_model.AiAzureEndpoint"
+                           placeholder="https://mein-name.openai.azure.com" />
+
+                    <label>@Loc.T("API Version", "API Version", "Versione API", "Versión API")</label>
+                    <input type="text" @bind="_model.AiAzureApiVersion"
+                           placeholder="2024-08-01-preview" />
+                }
+
+                <label>@Loc.T("Modell / Deployment", "Model / Deployment", "Modello / Deployment", "Modelo / Deployment")</label>
+                @if (_model.AiProvider == "grok")
+                {
+                    <select @bind="_model.AiModel">
+                        <option value="grok-3-mini">grok-3-mini (@Loc.T("empfohlen", "recommended", "consigliato", "recomendado"))</option>
+                        <option value="grok-3">grok-3</option>
+                    </select>
+                }
+                else if (_model.AiProvider == "azure")
+                {
+                    <input type="text" @bind="_model.AiModel"
+                           placeholder="@Loc.T("Deployment-Name aus Azure Portal", "Deployment name from Azure Portal", "Nome deployment da Azure Portal", "Nombre de deployment de Azure Portal")" />
+                }
+                else
+                {
+                    <select @bind="_model.AiModel">
+                        <option value="gpt-4o-mini">gpt-4o-mini (@Loc.T("empfohlen", "recommended", "consigliato", "recomendado"))</option>
+                        <option value="gpt-4o">gpt-4o</option>
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                    </select>
+                }
+
+                <label>@Loc.T("Icon-Schwellwert (Tage)", "Icon threshold (days)", "Soglia icona (giorni)", "Umbral icono (días)")</label>
+                <div>
+                    <input type="number" min="0" max="365" @bind="_model.AiThresholdDays" />
+                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Icon erscheint wenn letztes QSO ≥ X Tage zurück liegt. 0 = immer anzeigen.", "Icon appears when last QSO is ≥ X days ago. 0 = always show.", "Icona se ultimo QSO ≥ X giorni fa. 0 = sempre.", "Icono si último QSO ≥ X días. 0 = siempre.")</div>
+                </div>
+
+                <label>@Loc.T("Auswertungszeitraum (Tage)", "Summary period (days)", "Periodo riepilogo (giorni)", "Período resumen (días)")</label>
+                <div>
+                    <input type="number" min="0" max="3650" @bind="_model.AiSummaryDays" />
+                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Nachrichten der letzten X Tage werden ausgewertet. 0 = alle verfügbaren.", "Messages from the last X days are evaluated. 0 = all available.", "Messaggi degli ultimi X giorni. 0 = tutti.", "Mensajes de los últimos X días. 0 = todos.")</div>
+                </div>
+
+                <label>@Loc.T("Max. Nachrichten", "Max. messages", "Max. messaggi", "Máx. mensajes")</label>
+                <input type="number" min="10" max="500" @bind="_model.AiMaxMessages" />
+
+                <label>@Loc.T("API-Anfragen loggen", "Log API requests", "Registra richieste API", "Registrar solicitudes API")</label>
+                <label class="toggle-label">
+                    <input type="checkbox" @bind="_model.AiLogRequests" />
+                    <span>@(_model.AiLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+            </div>
+            @if (_model.AiEnabled && IsOpen("ai"))
+            {
+                <div class="settings-notice" style="background:#2a1a0a;border-color:#8a5a1a;margin-top:0.75rem">
+                    ⚠️ @Loc.T(
+                        "Datenschutzhinweis: Beim Generieren einer Zusammenfassung werden Nachrichtentexte an einen externen KI-Dienst gesendet. Bitte stelle sicher, dass alle Gesprächspartner damit einverstanden sind.",
+                        "Privacy notice: When generating a summary, message texts are sent to an external AI service. Please ensure all conversation partners consent to this.",
+                        "Avviso privacy: durante la generazione di un riepilogo, i testi vengono inviati a un servizio AI esterno.",
+                        "Aviso de privacidad: al generar un resumen, los textos se envían a un servicio de IA externo.")
+                </div>
+
+                <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input type="text" @bind="_aiTestCallsign" placeholder="@Loc.T("Rufzeichen z.B. DL6WAB-1", "Callsign e.g. DL6WAB-1", "Nominativo es. DL6WAB-1", "Indicativo p.ej. DL6WAB-1")"
+                               style="width:180px" />
+                        <button type="button" class="btn-send-now" @onclick="TestAiAsync" disabled="@_aiTesting">
+                            @if (_aiTesting)
+                            {
+                                <span>⏳ @Loc.T("Teste...", "Testing...", "Test...", "Probando...")</span>
+                            }
+                            else
+                            {
+                                <span>🔬 @Loc.T("DB + API testen", "Test DB + API", "Testa DB + API", "Probar DB + API")</span>
+                            }
+                        </button>
+                    </div>
+                    @if (_aiTestResult != null)
+                    {
+                        <div class="@(_aiTestResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.25rem;white-space:pre-wrap">
+                            @_aiTestResult
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
         </div>
@@ -1108,6 +1222,10 @@
 
     private bool    _qrzTesting;
     private string? _qrzTestResult;
+
+    private bool    _aiTesting;
+    private string? _aiTestResult;
+    private string  _aiTestCallsign = string.Empty;
 
     private HashSet<string> _openSections = [];
     private bool IsOpen(string id) => _openSections.Contains(id);
@@ -1369,6 +1487,91 @@
         _qrzTestResult = Loc.T("✅ Cache geleert.", "✅ Cache cleared.", "✅ Cache svuotata.", "✅ Caché vaciado.");
     }
 
+    private async Task TestAiAsync()
+    {
+        _aiTesting    = true;
+        _aiTestResult = null;
+        StateHasChanged();
+
+        try
+        {
+            // Save current settings first so QsoSummaryService picks them up
+            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+
+            var cs = _aiTestCallsign.Trim();
+            if (string.IsNullOrEmpty(cs))
+            {
+                _aiTestResult = Loc.T("❌ Bitte ein Rufzeichen eingeben.", "❌ Please enter a callsign.", "❌ Inserire un nominativo.", "❌ Introduce un indicativo.");
+                return;
+            }
+
+            // Strip SSID for the base callsign
+            var csBase = cs.Contains('-') ? cs[..cs.IndexOf('-')] : cs;
+
+            // Step 1: DB check
+            var hasData = await QsoSummaryService.HasSummaryAsync(csBase);
+            var lastQso = await QsoSummaryService.GetLastQsoTimeAsync(csBase);
+
+            var dbLine = lastQso.HasValue
+                ? Loc.T($"✅ DB: Letztes QSO mit {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
+                         $"✅ DB: Last QSO with {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
+                         $"✅ DB: Ultimo QSO con {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
+                         $"✅ DB: Último QSO con {csBase}: {lastQso:dd.MM.yyyy HH:mm}")
+                : Loc.T($"⚠️ DB: Keine Nachrichten für {csBase} gefunden.",
+                         $"⚠️ DB: No messages found for {csBase}.",
+                         $"⚠️ DB: Nessun messaggio trovato per {csBase}.",
+                         $"⚠️ DB: No se encontraron mensajes para {csBase}.");
+
+            var iconLine = hasData
+                ? Loc.T("✅ Icon: würde angezeigt werden.", "✅ Icon: would be shown.", "✅ Icona: verrebbe mostrata.", "✅ Ícono: se mostraría.")
+                : Loc.T("ℹ️ Icon: wird nicht angezeigt (Schwellwert nicht erreicht oder keine Daten).",
+                         "ℹ️ Icon: not shown (threshold not reached or no data).",
+                         "ℹ️ Icona: non mostrata (soglia non raggiunta o nessun dato).",
+                         "ℹ️ Ícono: no se muestra (umbral no alcanzado o sin datos).");
+
+            // Step 2: quick API ping (generate with max 1 message to test connectivity)
+            var apiLine = string.Empty;
+            var s = SettingsMonitor.CurrentValue.Ai;
+            if (!string.IsNullOrWhiteSpace(s.ApiKey))
+            {
+                try
+                {
+                    var summary = await QsoSummaryService.GenerateSummaryAsync(csBase);
+                    apiLine = summary != null
+                        ? Loc.T("✅ API: Verbindung erfolgreich, Zusammenfassung generiert.",
+                                 "✅ API: Connection successful, summary generated.",
+                                 "✅ API: Connessione riuscita, riepilogo generato.",
+                                 "✅ API: Conexión exitosa, resumen generado.")
+                        : Loc.T("❌ API: Anfrage fehlgeschlagen. Bitte Log prüfen.",
+                                 "❌ API: Request failed. Please check log.",
+                                 "❌ API: Richiesta fallita. Controlla il log.",
+                                 "❌ API: Solicitud fallida. Revisa el log.");
+                }
+                catch (Exception ex)
+                {
+                    apiLine = $"❌ API: {ex.Message}";
+                }
+            }
+            else
+            {
+                apiLine = Loc.T("ℹ️ API: Kein API-Key konfiguriert – nur DB-Test möglich.",
+                                 "ℹ️ API: No API key configured – DB test only.",
+                                 "ℹ️ API: Nessuna chiave API – solo test DB.",
+                                 "ℹ️ API: Sin clave API – solo prueba DB.");
+            }
+
+            _aiTestResult = string.Join("\n", new[] { dbLine, iconLine, apiLine }.Where(l => !string.IsNullOrEmpty(l)));
+        }
+        catch (Exception ex)
+        {
+            _aiTestResult = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _aiTesting = false;
+        }
+    }
+
     private async Task TestMqttConnectionAsync()
     {
         _mqttTestResult = null;
@@ -1526,6 +1729,16 @@
             QrzPassword             = s.Qrz.Password,
             QrzLogRequests          = s.Qrz.LogRequests,
             QrzCacheMaxAgeDays      = s.Qrz.CacheMaxAgeDays,
+            AiEnabled               = s.Ai.Enabled,
+            AiProvider              = s.Ai.Provider,
+            AiApiKey                = s.Ai.ApiKey,
+            AiModel                 = s.Ai.Model,
+            AiAzureEndpoint         = s.Ai.AzureEndpoint,
+            AiAzureApiVersion       = s.Ai.AzureApiVersion,
+            AiThresholdDays         = s.Ai.ThresholdDays,
+            AiSummaryDays           = s.Ai.SummaryDays,
+            AiMaxMessages           = s.Ai.MaxMessages,
+            AiLogRequests           = s.Ai.LogRequests,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -1629,6 +1842,18 @@
         public bool   QrzLogRequests     { get; set; }
         public int    QrzCacheMaxAgeDays { get; set; } = 30;
 
+        // AI / QSO Summary
+        public bool   AiEnabled          { get; set; }
+        public string AiProvider         { get; set; } = MeshcomWebDesk.Models.AiSettings.ProviderOpenAi;
+        public string AiApiKey           { get; set; } = string.Empty;
+        public string AiModel            { get; set; } = "gpt-4o-mini";
+        public string AiAzureEndpoint    { get; set; } = string.Empty;
+        public string AiAzureApiVersion  { get; set; } = "2024-08-01-preview";
+        public int    AiThresholdDays    { get; set; } = 7;
+        public int    AiSummaryDays      { get; set; } = 365;
+        public int    AiMaxMessages      { get; set; } = 50;
+        public bool   AiLogRequests      { get; set; }
+
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
 
@@ -1720,6 +1945,19 @@
                 Password        = QrzPassword,
                 LogRequests     = QrzLogRequests,
                 CacheMaxAgeDays = QrzCacheMaxAgeDays
+            },
+            Ai = new MeshcomWebDesk.Models.AiSettings
+            {
+                Enabled          = AiEnabled,
+                Provider         = AiProvider,
+                ApiKey           = AiApiKey,
+                Model            = AiModel,
+                AzureEndpoint    = AiAzureEndpoint,
+                AzureApiVersion  = string.IsNullOrWhiteSpace(AiAzureApiVersion) ? "2024-08-01-preview" : AiAzureApiVersion,
+                ThresholdDays = AiThresholdDays,
+                SummaryDays   = AiSummaryDays,
+                MaxMessages   = AiMaxMessages,
+                LogRequests   = AiLogRequests
             },
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels

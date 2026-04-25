@@ -12,6 +12,7 @@
 @inject QrzService QrzService
 @inject MqttService MqttService
 @inject MonitorSinkService MonitorSink
+@inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -43,6 +44,11 @@
                     @if (tab.UnreadCount > 0)
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
+                    }
+                    @if (tab.HasQsoSummary)
+                    {
+                        <span class="tab-ai-icon" title="@Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available", "Riepilogo QSO disponibile", "Resumen QSO disponible")"
+                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🤖</span>
                     }
                     <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
@@ -359,6 +365,71 @@
         }
     </div>
 </div>
+
+@* ===== QSO Summary Modal ===== *@
+@if (_qsoSummaryVisible && _qsoSummaryRecord != null)
+{
+    <div class="qso-summary-backdrop" @onclick="CloseQsoSummary">
+        <div class="qso-summary-modal" @onclick:stopPropagation="true">
+            <div class="qso-summary-header">
+                <span>🤖 @Loc.T("QSO-Zusammenfassung", "QSO Summary", "Riepilogo QSO", "Resumen QSO") – @_qsoSummaryCallsign</span>
+                <button class="qso-summary-close" @onclick="CloseQsoSummary">&times;</button>
+            </div>
+            <div class="qso-summary-meta">
+                📅 @Loc.T("Letztes QSO:", "Last QSO:", "Ultimo QSO:", "Último QSO:")
+                <strong>@_qsoSummaryRecord.LastQsoAt.ToString("dd.MM.yyyy HH:mm")</strong>
+                &nbsp;|&nbsp;
+                @Loc.T("Nachrichten in DB:", "Messages in DB:", "Messaggi nel DB:", "Mensajes en DB:")
+                <strong>@_qsoSummaryRecord.MessageCount</strong>
+                @if (_qsoSummaryRecord.CreatedAt != DateTime.MinValue)
+                {
+                    <span>
+                        &nbsp;|&nbsp;
+                        @Loc.T("Zusammenfassung erstellt:", "Summary generated:", "Riepilogo generato:", "Resumen generado:")
+                        <strong>@_qsoSummaryRecord.CreatedAt.ToString("dd.MM.yyyy HH:mm")</strong>
+                    </span>
+                }
+            </div>
+            <div class="qso-summary-body">
+                @if (string.IsNullOrEmpty(_qsoSummaryRecord.SummaryText))
+                {
+                    <div class="qso-summary-hint">
+                        ℹ️ @Loc.T(
+                            "Noch keine Zusammenfassung vorhanden. Klicke auf 'Generieren' um die QSO-Daten aus der Datenbank auszuwerten.",
+                            "No summary yet. Click 'Generate' to analyse the QSO data from the database.",
+                            "Nessun riepilogo ancora. Fai clic su 'Genera' per analizzare i dati QSO dal database.",
+                            "Aun no hay resumen. Haz clic en 'Generar' para analizar los datos QSO de la base de datos.")
+                    </div>
+                }
+                else
+                {
+                    @_qsoSummaryRecord.SummaryText
+                }
+            </div>
+            <div class="qso-summary-footer">
+                <button class="btn-action" @onclick="RegenerateQsoSummaryAsync" disabled="@_qsoSummaryLoading">
+                    @if (_qsoSummaryLoading)
+                    {
+                        <span>⏳ @Loc.T("Wird generiert…", "Generating…", "Generazione…", "Generando…")</span>
+                    }
+                    else if (string.IsNullOrEmpty(_qsoSummaryRecord.SummaryText))
+                    {
+                        <span>✨ @Loc.T("Generieren", "Generate", "Genera", "Generar")</span>
+                    }
+                    else
+                    {
+                        <span>🔄 @Loc.T("Neu generieren", "Regenerate", "Rigenera", "Regenerar")</span>
+                    }
+                </button>
+                <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+            </div>
+            @if (_qsoSummaryError != null)
+            {
+                <div class="qso-summary-error">❌ @_qsoSummaryError</div>
+            }
+        </div>
+    </div>
+}
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
@@ -381,7 +452,17 @@
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
     private bool _showMonitor = false;
+
+    // QSO Summary modal state
+    private bool               _qsoSummaryVisible;
+    private bool               _qsoSummaryLoading;
+    private string?            _qsoSummaryCallsign;
+    private string?            _qsoSummaryError;
+    private QsoSummaryRecord?  _qsoSummaryRecord;
+    private ChatTab?           _qsoSummaryTab;
+
     private bool _scrollMessages;
+
     private bool _soundEnabled = true;
     private bool _playSound;
     private bool _isInitialized;
@@ -612,7 +693,9 @@
         // If active tab was closed, select first available
         if (!string.IsNullOrEmpty(_activeTabKey))
         {
-            _activeTab = ChatService.GetTab(_activeTabKey);
+            // Use the instance from the refreshed list so HasQsoSummary is up-to-date
+            _activeTab = _tabs.FirstOrDefault(t => t.Key == _activeTabKey)
+                      ?? ChatService.GetTab(_activeTabKey);
         }
 
         if (_activeTab == null && _tabs.Count > 0)
@@ -664,6 +747,10 @@
         ChatService.ActiveTabKey = key;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
+
+        // Trigger QSO summary check for direct tabs that have no icon yet
+        if (_activeTab != null && key != "*" && !key.StartsWith('#') && !_activeTab.HasQsoSummary)
+            ChatService.TriggerQsoSummaryCheck(_activeTab, key);
     }
 
     private async Task ConfirmCloseTab(string key)
@@ -708,10 +795,9 @@
 
         var key = _newTabCallsign.Trim().ToUpperInvariant();
         ChatService.OpenTab(key);
-        _activeTabKey = key;
-        _activeTab = ChatService.GetTab(key);
         _showNewTabInput = false;
         _newTabCallsign = string.Empty;
+        SelectTab(key);
         RefreshData();
     }
 
@@ -806,6 +892,53 @@
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
+    }
+
+    // ── QSO Summary ───────────────────────────────────────────────────────
+
+    private async Task OpenQsoSummary(ChatTab tab)
+    {
+        _qsoSummaryTab      = tab;
+        _qsoSummaryCallsign = tab.QsoSummaryCallsignBase ?? tab.Key;
+        _qsoSummaryError    = null;
+        _qsoSummaryLoading  = true;
+        _qsoSummaryVisible  = true;
+        _qsoSummaryRecord   = null;
+        StateHasChanged();
+
+        _qsoSummaryRecord  = await QsoSummaryService.GetSummaryAsync(_qsoSummaryCallsign);
+        _qsoSummaryLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseQsoSummary()
+    {
+        _qsoSummaryVisible = false;
+        _qsoSummaryRecord  = null;
+        _qsoSummaryError   = null;
+    }
+
+    private async Task RegenerateQsoSummaryAsync()
+    {
+        if (_qsoSummaryCallsign is null) return;
+        _qsoSummaryLoading = true;
+        _qsoSummaryError   = null;
+        StateHasChanged();
+
+        _qsoSummaryRecord = await QsoSummaryService.GenerateSummaryAsync(_qsoSummaryCallsign);
+        if (_qsoSummaryRecord is null)
+            _qsoSummaryError = Loc.T(
+                "Zusammenfassung konnte nicht generiert werden. Bitte API-Key und DB-Konfiguration prüfen.",
+                "Could not generate summary. Please check API key and DB configuration.",
+                "Impossibile generare il riepilogo. Verificare la chiave API e la configurazione DB.",
+                "No se pudo generar el resumen. Comprueba la clave API y la configuración de DB.");
+        else if (_qsoSummaryTab != null)
+        {
+            _qsoSummaryTab.HasQsoSummary = true;
+        }
+
+        _qsoSummaryLoading = false;
+        StateHasChanged();
     }
 
     private void ApplyTabOrder()
