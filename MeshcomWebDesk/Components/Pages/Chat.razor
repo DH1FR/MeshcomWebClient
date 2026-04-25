@@ -5,10 +5,13 @@
 @using Microsoft.Extensions.Options
 @using System.Text.RegularExpressions
 @rendermode InteractiveServer
+@using MeshcomWebDesk.Services.Database
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
 @inject LanguageService Loc
 @inject QrzService QrzService
+@inject MqttService MqttService
+@inject MonitorSinkService MonitorSink
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -336,6 +339,20 @@
                 {
                     <span class="status-pos-alt">&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</span>
                 }
+            </span>
+        }
+        @if (MonitorSink.IsEnabled)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="@DbStatusTooltip">
+                <span class="status-badge @DbStatusBadgeCss">@DbStatusIcon DB</span>
+            </span>
+        }
+        @if (MqttService.IsEnabled)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="@MqttStatusTooltip">
+                <span class="status-badge @MqttStatusBadgeCss">@MqttStatusIcon MQTT</span>
             </span>
         }
     </div>
@@ -999,6 +1016,24 @@
         : _status.HasReceivedData
             ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
             : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
+
+    private string DbStatusIcon       => MonitorSink.LastWriteOk == null ? "🟡"
+        : MonitorSink.LastWriteOk.Value ? "🟢" : "🔴";
+    private string DbStatusBadgeCss   => MonitorSink.LastWriteOk == null ? "status-badge-warn"
+        : MonitorSink.LastWriteOk.Value ? "status-badge-ok" : "status-badge-err";
+    private string DbStatusTooltip    => MonitorSink.LastWriteOk == null
+        ? Loc.T("Datenbank: noch kein Schreibvorgang", "Database: no write yet", "Database: nessuna scrittura", "Base de datos: sin escritura aún")
+        : MonitorSink.LastWriteOk.Value
+            ? Loc.T("Datenbank: letzter Schreibvorgang OK", "Database: last write OK", "Database: ultima scrittura OK", "Base de datos: última escritura OK")
+              + (MonitorSink.LastWriteAt.HasValue ? " · " + MonitorSink.LastWriteAt.Value.ToLocalTime().ToString("HH:mm:ss") : "")
+            : Loc.T("Datenbank: letzter Schreibvorgang fehlgeschlagen", "Database: last write failed", "Database: ultima scrittura fallita", "Base de datos: última escritura fallida")
+              + (MonitorSink.LastWriteAt.HasValue ? " · " + MonitorSink.LastWriteAt.Value.ToLocalTime().ToString("HH:mm:ss") : "");
+
+    private string MqttStatusIcon     => MqttService.IsConnected ? "🟢" : "🔴";
+    private string MqttStatusBadgeCss => MqttService.IsConnected ? "status-badge-ok" : "status-badge-err";
+    private string MqttStatusTooltip  => MqttService.IsConnected
+        ? Loc.T("MQTT: verbunden", "MQTT: connected", "MQTT: connesso", "MQTT: conectado")
+        : Loc.T("MQTT: nicht verbunden", "MQTT: not connected", "MQTT: non connesso", "MQTT: no conectado");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 

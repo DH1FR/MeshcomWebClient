@@ -1320,6 +1320,20 @@ h1:focus {
 .status-warn { color: #d29922; }
 .status-pos-alt { color: #6c757d; }
 
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+.status-badge-ok   { background: #0f2d16; color: #3fb950; border: 1px solid #238636; }
+.status-badge-err  { background: #2d0f0f; color: #f85149; border: 1px solid #da3633; }
+.status-badge-warn { background: #2d1f0a; color: #d29922; border: 1px solid #9e6a03; }
+
 .status-mute-btn {
     background: none;
     border: none;
