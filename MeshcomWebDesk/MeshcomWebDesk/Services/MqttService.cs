@@ -175,7 +175,7 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "MQTT initial connect failed – will retry on reconnect.");
+            _logger.LogWarning("MQTT connect failed ({Message}) – will retry on reconnect.", ex.Message);
         }
     }
 
@@ -215,7 +215,7 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         await Task.Delay(TimeSpan.FromSeconds(10));
 
         try { await ConnectAsync(_cts!.Token); }
-        catch (Exception ex) { _logger.LogError(ex, "MQTT reconnect failed."); }
+        catch (Exception ex) { _logger.LogWarning("MQTT reconnect failed ({Message}).", ex.Message); }
     }
 
     private async Task OnMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)

@@ -5,7 +5,7 @@ public class MqttSettings
     public bool   Enabled       { get; set; } = false;
     public string Host          { get; set; } = "localhost";
     public int    Port          { get; set; } = 1883;
-    public string ClientId      { get; set; } = "meshcom-webdesk";
+    public string ClientId      { get; set; } = "meshcom-webdesk-" + Guid.NewGuid().ToString("N")[..6];
     public string Username      { get; set; } = string.Empty;
 
     /// <summary>Stored encrypted with "dp:" prefix via ASP.NET Core Data Protection.</summary>
