@@ -580,11 +580,9 @@
             return;
         }
 
-        // Measured hull – nur Stationen mit bestätigter Direktverbindung (Chat/ACK direkt via LoRa)
+        // Measured hull – nur aktuell direkt empfangene Stationen (HopCount == 0, kein Relay)
         var measuredPoints = ChatService.MhList
-            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
-                     && s.HopCount == 0
-                     && s.DirectLinkConfirmed)
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
 

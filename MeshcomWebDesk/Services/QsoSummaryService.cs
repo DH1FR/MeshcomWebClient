@@ -418,6 +418,7 @@ public sealed class QsoSummaryService
         int       pageSize   = 50,
         CancellationToken ct = default)
     {
+        // Note: ORDER BY ASC → oldest message first (chronological)
         if (!IsDbAvailable(out var db, out _))
             return ([], 0);
 
@@ -442,7 +443,7 @@ public sealed class QsoSummaryService
                 SELECT timestamp, from_call, to_call, text, is_outgoing
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
-                ORDER BY timestamp DESC
+                ORDER BY timestamp ASC
                 LIMIT @limit OFFSET @offset
                 """, conn);
             foreach (var p in where.Params)
@@ -508,7 +509,7 @@ public sealed class QsoSummaryService
                 SELECT timestamp, from_call, to_call, text, is_outgoing
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
-                ORDER BY timestamp DESC
+                ORDER BY timestamp ASC
                 LIMIT @limit OFFSET @offset
                 """, conn);
             foreach (var p in where.Params)
@@ -855,7 +856,7 @@ public sealed class QsoSummaryService
               AND is_telemetry       = 0
               AND text IS NOT NULL AND text != ''
               {dateFilter}
-            ORDER BY timestamp DESC
+            ORDER BY timestamp ASC
             LIMIT @max
             """, conn);
         cmd.Parameters.AddWithValue("@cs",     callsignBase);
