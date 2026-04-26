@@ -12,8 +12,9 @@ public sealed class ElevationService
 {
     private const string ApiBase       = "https://api.opentopodata.org/v1/srtm90m";
     private const int    RadialCount   = 36;    // every 10° → 36 directions
-    private const int    ProfileSteps  = 12;    // sample points per radial
-    private const double MaxRangeKm    = 80.0;  // realistic max for LoRa ground node
+    private const int    ProfileSteps  = 16;    // sample points per radial
+    private const double MaxRangeKm    = 250.0; // upper bound; earth curvature limits flat terrain naturally
+    private const double AtmRefraction = 1.33;  // k-factor for standard atmosphere
     private const double EarthRadiusKm = 6371.0;
 
     private readonly HttpClient              _http;
@@ -68,16 +69,21 @@ public sealed class ElevationService
             // Fetch elevations in batches of 100 (API limit)
             var elevations = await FetchElevationsBatchedAsync(allPoints, ct);
 
-            // Per radial: walk outward, track the highest angle seen so far.
-            // The first point that raises the horizon above the previous max blocks LOS.
+            // Per radial: walk outward using the "highest horizon angle" method.
+            // maxAngleDeg tracks the steepest upward angle seen so far from the antenna.
+            // As long as the next terrain point is BELOW this angle, LOS is still clear.
+            // The moment a terrain point rises ABOVE maxAngleDeg, it blocks the view
+            // → that is the LOS limit for this radial.
+            //
+            // On flat terrain the earth-bulge formula naturally limits the range because
+            // the effective terrain height drops below the radio horizon angle.
             var polygon = new List<double[]>(RadialCount);
 
             for (var r = 0; r < RadialCount; r++)
             {
                 var bearing      = r * (360.0 / RadialCount);
-                var maxAngleDeg  = double.MinValue;
-                var losBlockedKm = MaxRangeKm; // stays at max if never blocked
-                var blocked      = false;
+                var maxAngleDeg  = double.MinValue;  // running horizon
+                var losReachKm   = MaxRangeKm;       // default = max (free horizon)
 
                 for (var s = 0; s < ProfileSteps; s++)
                 {
@@ -87,32 +93,33 @@ public sealed class ElevationService
                     var distKm   = allPoints[idx].distKm;
                     var elevM    = elevations[idx] ?? 0.0;
 
-                    // Earth-bulge correction (metres)
-                    var bulgeM   = (distKm * distKm * 1_000_000.0) / (2.0 * EarthRadiusKm * 1000.0);
+                    // Effective earth radius with atmospheric refraction (k-factor)
+                    var Re       = EarthRadiusKm * AtmRefraction;
+
+                    // Earth-bulge correction: how much the terrain drops below the
+                    // straight line between antenna and observation point (in metres)
+                    var bulgeM   = (distKm * distKm * 1_000_000.0) / (2.0 * Re * 1000.0);
                     var effElevM = elevM - bulgeM;
 
-                    // Angle from own antenna tip to this terrain point
+                    // Angle from antenna tip to this corrected terrain point
                     var angleDeg = Math.Atan2(effElevM - ownTotalM, distKm * 1000.0) * 180.0 / Math.PI;
 
                     if (angleDeg > maxAngleDeg)
                     {
+                        // This terrain point raises the horizon → blocks everything beyond
                         maxAngleDeg = angleDeg;
-
-                        // First point that raises the horizon = LOS blocked HERE
-                        // (not further: even a taller hill behind this one doesn't help)
-                        if (!blocked)
-                        {
-                            losBlockedKm = distKm;
-                            blocked      = true;
-                        }
+                        losReachKm  = distKm;
+                        // Continue scan: a taller ridge further out would be behind this
+                        // blockage, so we keep the first (nearest) obstruction as the limit.
+                        break;
                     }
+                    // else: terrain is below current horizon → LOS still clear, continue
                 }
 
-                var (pLat, pLon) = DestinationPoint(ownLat, ownLon, bearing, losBlockedKm);
+                var (pLat, pLon) = DestinationPoint(ownLat, ownLon, bearing, losReachKm);
                 polygon.Add([pLat, pLon]);
 
-                _logger.LogDebug("ElevationService: bearing={B}° → reach={R:F1} km (blocked={Bl})",
-                    bearing, losBlockedKm, blocked);
+                _logger.LogDebug("ElevationService: bearing={B}° → reach={R:F1} km", bearing, losReachKm);
             }
 
             _logger.LogInformation("ElevationService: polygon with {N} vertices computed", polygon.Count);
