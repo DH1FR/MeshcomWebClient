@@ -580,9 +580,9 @@
             return;
         }
 
-        // Measured hull (existing stations)
+        // Measured hull – nur direkt empfangene Stationen (HopCount == 0), keine Relay-Hops
         var measuredPoints = ChatService.MhList
-            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
 

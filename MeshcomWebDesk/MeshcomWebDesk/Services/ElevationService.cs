@@ -11,9 +11,9 @@ namespace MeshcomWebDesk.Services;
 public sealed class ElevationService
 {
     private const string ApiBase       = "https://api.opentopodata.org/v1/srtm90m";
-    private const int    RadialCount   = 36;    // every 10° → 36 directions (fast enough)
-    private const int    ProfileSteps  = 12;    // sample points per radial (12 × 36 = 432 pts = 5 batches)
-    private const double MaxRangeKm    = 150.0; // max prediction radius
+    private const int    RadialCount   = 36;    // every 10° → 36 directions
+    private const int    ProfileSteps  = 12;    // sample points per radial
+    private const double MaxRangeKm    = 80.0;  // realistic max for LoRa ground node
     private const double EarthRadiusKm = 6371.0;
 
     private readonly HttpClient              _http;
@@ -69,7 +69,7 @@ public sealed class ElevationService
             var elevations = await FetchElevationsBatchedAsync(allPoints, ct);
 
             // Per radial: walk outward, track the highest angle seen so far.
-            // LOS is blocked at the first point that exceeds the running max.
+            // The first point that raises the horizon above the previous max blocks LOS.
             var polygon = new List<double[]>(RadialCount);
 
             for (var r = 0; r < RadialCount; r++)
@@ -77,35 +77,42 @@ public sealed class ElevationService
                 var bearing      = r * (360.0 / RadialCount);
                 var maxAngleDeg  = double.MinValue;
                 var losBlockedKm = MaxRangeKm; // stays at max if never blocked
+                var blocked      = false;
 
                 for (var s = 0; s < ProfileSteps; s++)
                 {
                     var idx = r * ProfileSteps + s;
                     if (idx >= elevations.Count) break;
 
-                    var distKm    = allPoints[idx].distKm;
-                    var elevM     = elevations[idx] ?? 0.0;
+                    var distKm   = allPoints[idx].distKm;
+                    var elevM    = elevations[idx] ?? 0.0;
 
-                    // Earth-bulge correction: terrain appears lower over the horizon
-                    var bulgem    = (distKm * distKm * 1_000_000.0) / (2.0 * EarthRadiusKm * 1000.0); // metres
-                    var effElevM  = elevM - bulgem;
+                    // Earth-bulge correction (metres)
+                    var bulgeM   = (distKm * distKm * 1_000_000.0) / (2.0 * EarthRadiusKm * 1000.0);
+                    var effElevM = elevM - bulgeM;
 
                     // Angle from own antenna tip to this terrain point
-                    var angleDeg  = Math.Atan2(effElevM - ownTotalM, distKm * 1000.0) * 180.0 / Math.PI;
+                    var angleDeg = Math.Atan2(effElevM - ownTotalM, distKm * 1000.0) * 180.0 / Math.PI;
 
                     if (angleDeg > maxAngleDeg)
                     {
-                        // New obstruction found – LOS is blocked here
-                        maxAngleDeg  = angleDeg;
-                        losBlockedKm = distKm;
-                        // Don't break – a taller obstacle further away could dominate
+                        maxAngleDeg = angleDeg;
+
+                        // First point that raises the horizon = LOS blocked HERE
+                        // (not further: even a taller hill behind this one doesn't help)
+                        if (!blocked)
+                        {
+                            losBlockedKm = distKm;
+                            blocked      = true;
+                        }
                     }
                 }
 
                 var (pLat, pLon) = DestinationPoint(ownLat, ownLon, bearing, losBlockedKm);
                 polygon.Add([pLat, pLon]);
 
-                _logger.LogDebug("ElevationService: bearing={B}° → reach={R:F1} km", bearing, losBlockedKm);
+                _logger.LogDebug("ElevationService: bearing={B}° → reach={R:F1} km (blocked={Bl})",
+                    bearing, losBlockedKm, blocked);
             }
 
             _logger.LogInformation("ElevationService: polygon with {N} vertices computed", polygon.Count);
