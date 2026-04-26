@@ -739,12 +739,14 @@ public sealed class QsoSummaryService
 
         // Direct conversation: (remote→me) OR (me→remote)
         // Excludes messages to/from third parties and ACK-only messages
+        // @cs matches the exact base callsign (e.g. DH1FR),
+        // @csLike matches only SSIDs (e.g. DH1FR-1, DH1FR-12) – NOT DH1FRX.
         var conditions = new List<string>
         {
             """
             (
-                (from_call LIKE @csLike  AND (to_call = @myCall OR to_call LIKE @myLike))
-             OR (to_call   LIKE @csLike  AND (from_call = @myCall OR from_call LIKE @myLike))
+                ((from_call = @cs OR from_call LIKE @csLike) AND (to_call = @myCall OR to_call LIKE @myLike))
+             OR ((to_call   = @cs OR to_call   LIKE @csLike) AND (from_call = @myCall OR from_call LIKE @myLike))
             )
             """,
             "is_position_beacon = 0",
@@ -757,9 +759,10 @@ public sealed class QsoSummaryService
 
         var parms = new Dictionary<string, object>
         {
-            ["@csLike"] = callsignBase + "%",   // covers DL6WAB, DL6WAB-1, DL6WAB-11
+            ["@cs"]     = callsignBase,            // exact base callsign (e.g. DH1FR)
+            ["@csLike"] = callsignBase + "-%",     // SSIDs only: DH1FR-1, DH1FR-12 – NOT DH1FRX
             ["@myCall"] = myCallsign,
-            ["@myLike"] = myBase + "%"
+            ["@myLike"] = myBase + "-%"            // own SSIDs only: DH1FR-1 etc.
         };
 
         if (from.HasValue) { conditions.Add("timestamp >= @from"); parms["@from"] = from.Value; }
@@ -863,7 +866,7 @@ public sealed class QsoSummaryService
         cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
         cmd.Parameters.AddWithValue("@max",    ai.MaxMessages);
         if (ai.SummaryDays > 0)
-            cmd.Parameters.AddWithValue("@since", DateTime.UtcNow.AddDays(-ai.SummaryDays));
+            cmd.Parameters.AddWithValue("@since", DateTime.Now.AddDays(-ai.SummaryDays));
 
         var list = new List<RawMessage>();
         await using var reader = await cmd.ExecuteReaderAsync(ct);
