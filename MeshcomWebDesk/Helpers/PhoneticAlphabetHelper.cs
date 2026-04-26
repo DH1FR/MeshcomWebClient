@@ -25,7 +25,7 @@ public static class PhoneticAlphabetHelper
     // Digits spoken in the respective UI language
     private static readonly Dictionary<string, string[]> Digits = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["de"] = ["Null", "Ein",  "Zwei", "Drei", "Vier", "Fünf", "Sechs", "Sieben", "Acht", "Nein"],
+        ["de"] = ["Null", "Eins", "Zwei", "Drei", "Vier", "Fünf", "Sechs", "Sieben", "Acht", "Nein"],
         ["en"] = ["Zero", "One",  "Two",  "Three","Four", "Five", "Six",   "Seven",  "Eight","Nine"],
         ["it"] = ["Zero", "Uno",  "Due",  "Tre",  "Quattro","Cinque","Sei","Sette",  "Otto", "Nove"],
         ["es"] = ["Cero", "Uno",  "Dos",  "Tres", "Cuatro","Cinco","Seis","Siete",  "Ocho", "Nueve"],
