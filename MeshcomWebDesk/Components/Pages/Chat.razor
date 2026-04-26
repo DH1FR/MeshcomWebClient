@@ -303,6 +303,11 @@
                 title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound", "Disattiva audio", "Silenciar") : Loc.T("Ton einschalten", "Unmute sound", "Attiva audio", "Activar sonido"))">
             <span class="status-badge @(_soundEnabled ? "status-badge-neutral" : "status-badge-err")">@(_soundEnabled ? "🔔" : "🔕")</span>
         </button>
+        <button class="status-mute-btn @(_voiceEnabled ? "" : "status-mute-off")"
+                @onclick="ToggleVoiceAsync"
+                title="@(_voiceEnabled ? Loc.T("Sprachansagen ausschalten", "Disable voice announcements", "Disattiva annunci vocali", "Desactivar anuncios de voz") : Loc.T("Sprachansagen einschalten", "Enable voice announcements", "Attiva annunci vocali", "Activar anuncios de voz"))">
+            <span class="status-badge @(_voiceEnabled ? "status-badge-neutral" : "status-badge-err")">@(_voiceEnabled ? "🔊" : "🔇")</span>
+        </button>
         <span class="status-sep">|</span>
         <span class="status-item" title="@UdpStatusTooltip">
             <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP</span>
@@ -708,7 +713,9 @@
     private bool _scrollMessages;
 
     private bool _soundEnabled = true;
+    private bool _voiceEnabled = false;
     private bool _playSound;
+    private string? _pendingSpeechText;
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
     private string _monitorFilter = string.Empty;
@@ -795,6 +802,7 @@
         ChatService.OnChange += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
+        ChatService.OnNewDirectTab += HandleNewDirectTab;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.ActiveTabKey;
         RefreshData();
@@ -818,6 +826,18 @@
                 if (targetVisible != _showMonitor)
                 {
                     _showMonitor = targetVisible;
+                    needsRender = true;
+                }
+            }
+            catch (JSException) { }
+
+            // Restore voice-announcement toggle state (default: off)
+            try
+            {
+                var voiceOn = await JS.InvokeAsync<bool?>("meshcomChat.getVoiceEnabled");
+                if (voiceOn.HasValue && voiceOn.Value != _voiceEnabled)
+                {
+                    _voiceEnabled = voiceOn.Value;
                     needsRender = true;
                 }
             }
@@ -887,6 +907,14 @@
         {
             _playWatchlistSound = false;
             try { await JS.InvokeVoidAsync("playWatchlistBeep"); }
+            catch (JSException) { }
+        }
+
+        if (_pendingSpeechText != null)
+        {
+            var text = _pendingSpeechText;
+            _pendingSpeechText = null;
+            try { await JS.InvokeVoidAsync("speakText", text, Loc.Current); }
             catch (JSException) { }
         }
     }
@@ -980,6 +1008,27 @@
         _showMonitor = !_showMonitor;
         try { await JS.InvokeVoidAsync("meshcomChat.setMonitorVisible", _showMonitor); }
         catch (JSException) { }
+    }
+
+    private async Task ToggleVoiceAsync()
+    {
+        _voiceEnabled = !_voiceEnabled;
+        try { await JS.InvokeVoidAsync("meshcomChat.setVoiceEnabled", _voiceEnabled); }
+        catch (JSException) { }
+    }
+
+    private void HandleNewDirectTab(string callsign)
+    {
+        if (!_voiceEnabled) return;
+        var phonetic  = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+        var firstName = QrzFirstName(callsign);
+        var text = Loc.T(
+            $"Nachricht von {phonetic}{(firstName != null ? ". " + firstName : "")}",
+            $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}",
+            $"Messaggio da {phonetic}{(firstName != null ? ". " + firstName : "")}",
+            $"Mensaje de {phonetic}{(firstName != null ? ". " + firstName : "")}");
+        _pendingSpeechText = text;
+        InvokeAsync(StateHasChanged);
     }
 
     private void SelectTab(string key)
@@ -1136,6 +1185,7 @@
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
+        ChatService.OnNewDirectTab -= HandleNewDirectTab;
     }
 
     // ── QSO Summary ───────────────────────────────────────────────────────
@@ -1390,6 +1440,15 @@
                 _watchlistAlerts.Insert(0, new WatchlistAlert(callsign, eventType, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
+                if (_voiceEnabled)
+                {
+                    var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+                    _pendingSpeechText = Loc.T(
+                        $"{phonetic} gehört",
+                        $"{phonetic} heard",
+                        $"{phonetic} ascoltato",
+                        $"{phonetic} escuchado");
+                }
                 StateHasChanged();
             });
             await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.Value.WatchAlertMinutes) * 60 + 2));

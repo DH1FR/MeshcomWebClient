@@ -193,6 +193,12 @@ window.meshcomChat = (function () {
         },
         setMonitorVisible: (visible) =>
             localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0'),
+        getVoiceEnabled: () => {
+            var v = localStorage.getItem('meshcom-voice-enabled');
+            return v === null ? null : v === '1';
+        },
+        setVoiceEnabled: (enabled) =>
+            localStorage.setItem('meshcom-voice-enabled', enabled ? '1' : '0'),
         getTabOrder: () => {
             var v = localStorage.getItem('meshcom-tab-order');
             try { return v ? JSON.parse(v) : []; } catch (e) { return []; }
