@@ -49,7 +49,7 @@
                     @if (tab.HasQsoSummary)
                     {
                         <span class="tab-ai-icon" title="@Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available", "Riepilogo QSO disponibile", "Resumen QSO disponible")"
-                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🧠</span>
+                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🤖</span>
                     }
                     <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
@@ -375,7 +375,7 @@
 
             <!-- Header -->
             <div class="qso-summary-header">
-                <span>🧠 @_qsoSummaryCallsign</span>
+                <span>🤖 @_qsoSummaryCallsign</span>
                 <button class="qso-summary-close" @onclick="CloseQsoSummary">&times;</button>
             </div>
 
@@ -411,7 +411,7 @@
                     🔎 @Loc.T("Suche", "Search", "Cerca", "Buscar")
                 </button>
                 <button class="qso-modal-tab @(_qsoModalTab == 3 ? "active" : "")" @onclick='() => SwitchModalTab(3)'>
-                    🧠 @Loc.T("KI-Suche", "AI Search", "Ricerca IA", "Búsqueda IA")
+                    🤖 @Loc.T("KI-Suche", "AI Search", "Ricerca IA", "Búsqueda IA")
                 </button>
             </div>
 
