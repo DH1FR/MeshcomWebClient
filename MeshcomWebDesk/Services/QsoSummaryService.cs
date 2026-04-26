@@ -465,6 +465,8 @@ public sealed class QsoSummaryService
                   AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) NOT LIKE '#%'
                   AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) != '*'
                   AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) NOT REGEXP '^[0-9]+$'
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) != ''
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) IS NOT NULL
                   AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) != @my
                   AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) NOT LIKE @myLike
                 GROUP BY partner
