@@ -303,6 +303,20 @@
         <span class="status-item" title="@UdpStatusTooltip">
             <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP</span>
         </span>
+        @if (MonitorSink.IsEnabled)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="@DbStatusTooltip">
+                <span class="status-badge @DbStatusBadgeCss">@DbStatusIcon DB</span>
+            </span>
+        }
+        @if (MqttService.IsEnabled)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="@MqttStatusTooltip">
+                <span class="status-badge @MqttStatusBadgeCss">@MqttStatusIcon MQTT</span>
+            </span>
+        }
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">
             <span class="status-badge status-badge-neutral">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
@@ -350,22 +364,8 @@
                 <span class="status-badge status-badge-info">📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)@if (_status.OwnAltitude.HasValue) {<text>&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</text>}</span>
             </span>
         }
-        @if (MonitorSink.IsEnabled)
-        {
-            <span class="status-sep">|</span>
-            <span class="status-item" title="@DbStatusTooltip">
-                <span class="status-badge @DbStatusBadgeCss">@DbStatusIcon DB</span>
-            </span>
-        }
-        @if (MqttService.IsEnabled)
-        {
-            <span class="status-sep">|</span>
-            <span class="status-item" title="@MqttStatusTooltip">
-                <span class="status-badge @MqttStatusBadgeCss">@MqttStatusIcon MQTT</span>
-            </span>
-        }
-    </div>
-</div>
+            </div>
+        </div>
 
 @* ===== QSO Summary Modal ===== *@
 @if (_qsoSummaryVisible)
