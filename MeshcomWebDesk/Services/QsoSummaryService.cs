@@ -337,8 +337,19 @@ public sealed class QsoSummaryService
             var lastQsoAt    = messages.Max(m => m.Timestamp);
             var messageCount = messages.Count;
 
+            // Build a distinct callsign header (all unique from/to callsigns in the loaded messages)
+            var callsigns = messages
+                .SelectMany(m => new[] { m.From, m.To })
+                .Where(c => !string.IsNullOrWhiteSpace(c) && c != "*")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c)
+                .ToList();
+            var callsignHeader = $"📻 {string.Join("  ·  ", callsigns)}\n\n";
+
             var summaryText = await CallOpenAiAsync(ai, callsignBase, messages, ct);
             if (summaryText is null) return null;
+
+            summaryText = callsignHeader + summaryText;
 
             // Upsert summary
             await using var upsert = new MySqlCommand(
