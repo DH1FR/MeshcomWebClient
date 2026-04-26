@@ -129,15 +129,17 @@ h1:focus {
     background: #2d6a4f;
     color: #b7e4c7;
     font-weight: bold;
-    font-size: 16px;
-    padding: 6px 12px;
+    font-size: 13px;
+    padding: 6px 14px;
 }
 
 .tab-new:hover {
     background: #40916c;
 }
 
-/* QRZ name below callsign in tab button */
+.tab-recent-btn {
+    font-size: 13px;
+}
 .tab-label-wrap {
     display: flex;
     flex-direction: column;
@@ -188,10 +190,6 @@ h1:focus {
     align-items: center;
     gap: 0;
     flex-shrink: 0;
-}
-
-.tab-recent-btn {
-    font-size: 16px;
 }
 
 /* ===== Recent QSO Partners Flyout ===== */
