@@ -337,10 +337,12 @@ public sealed class QsoSummaryService
             var lastQsoAt    = messages.Max(m => m.Timestamp);
             var messageCount = messages.Count;
 
-            // Build a distinct callsign header (all unique from/to callsigns in the loaded messages)
+            // Build header: only callsigns belonging to the remote station (exact base or with SSID)
             var callsigns = messages
                 .SelectMany(m => new[] { m.From, m.To })
-                .Where(c => !string.IsNullOrWhiteSpace(c) && c != "*")
+                .Where(c => !string.IsNullOrWhiteSpace(c)
+                    && (c.Equals(callsignBase, StringComparison.OrdinalIgnoreCase)
+                        || c.StartsWith(callsignBase + "-", StringComparison.OrdinalIgnoreCase)))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(c => c)
                 .ToList();
