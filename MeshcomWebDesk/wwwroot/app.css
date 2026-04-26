@@ -2060,6 +2060,22 @@ h1:focus {
     flex-shrink: 0;
 }
 
+/* Coverage cloud legend swatches */
+.leg-coverage {
+    width: 28px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.leg-coverage-measured {
+    background: rgba(77, 171, 247, 0.18);
+    border: 2px dashed rgba(77, 171, 247, 0.7);
+}
+.leg-coverage-topo {
+    background: rgba(240, 192, 96, 0.15);
+    border: 2px dashed rgba(240, 192, 96, 0.65);
+}
+
 /* Leaflet APRS-style markers */
 .aprs-wrap {
     display: flex;

@@ -6,10 +6,12 @@ window.meshcomMap = (function () {
     var _stationLayer    = null;
     var _ownLayer        = null;
     var _relayLayer      = null;
+    var _coverageLayer   = null;
     var _lastBounds      = null;
     var _stationMarkers  = {};
     var _initialFitDone  = false;
     var _readyToSave     = false;
+    var _dotNet          = null;
     var STORAGE_KEY      = 'meshcom_map_view';
 
     function esc(s) {
@@ -68,11 +70,12 @@ window.meshcomMap = (function () {
     }
 
     return {
-        init: function (elementId, ownLat, ownLon) {
+        init: function (elementId, ownLat, ownLon, dotNetRef) {
             if (_map) { _map.remove(); _map = null; }
             _lastBounds     = null;
             _initialFitDone = false;
             _readyToSave    = false;
+            _dotNet         = dotNetRef;
 
             var saved = null;
             try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { }
@@ -87,9 +90,10 @@ window.meshcomMap = (function () {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
                 maxZoom: 19
             }).addTo(_map);
-            _relayLayer   = L.layerGroup().addTo(_map);   // drawn first (below stations)
-            _stationLayer = L.layerGroup().addTo(_map);
-            _ownLayer     = L.layerGroup().addTo(_map);
+            _coverageLayer = L.layerGroup();                   // not added by default
+            _relayLayer    = L.layerGroup().addTo(_map);
+            _stationLayer  = L.layerGroup().addTo(_map);
+            _ownLayer      = L.layerGroup().addTo(_map);
 
             if (saved) {
                 _initialFitDone = true;
@@ -183,6 +187,10 @@ window.meshcomMap = (function () {
                 }
                 var aprsLink = '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(s.callsign)
                     + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
+                var aiBtn = '<br><button onclick="meshcomMap.requestAiInfo(\'' + esc(s.callsign) + '\')" '
+                    + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
+                    + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">🤖 KI-Info</button>'
+                    + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
                 var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine + badgeLine + relayLine + telemLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
@@ -191,7 +199,8 @@ window.meshcomMap = (function () {
                     + (s.locator  ? '<br><span style="font-size:11px">QTH: <code>' + esc(s.locator) + '</code></span>' : '')
                     + '<br><a href="https://www.openstreetmap.org/?mlat=' + s.lat.toFixed(6) + '&mlon=' + s.lon.toFixed(6) + '&zoom=14" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">'
                     + '📍 ' + s.lat.toFixed(4) + (s.lat >= 0 ? '°N' : '°S') + ' ' + s.lon.toFixed(4) + (s.lon >= 0 ? '°E' : '°W') + '</a>'
-                    + aprsLink;
+                    + aprsLink
+                    + aiBtn;
 
                 var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })
                     .bindPopup(popup)
@@ -308,6 +317,131 @@ window.meshcomMap = (function () {
             return true;
         },
 
-        invalidateSize: function () { if (_map) _map.invalidateSize(); }
+        invalidateSize: function () { if (_map) _map.invalidateSize(); },
+
+        // ── KI-Popup ────────────────────────────────────────────────────
+
+        requestAiInfo: function (callsign) {
+            if (!_dotNet) return;
+            var safeId = callsign.replace(/[^a-zA-Z0-9]/g, '-');
+            var el = document.getElementById('ai-result-' + safeId);
+            var btn = document.getElementById('ai-btn-' + safeId);
+            if (el)  el.innerHTML  = '<span style="color:#8b949e">⏳ KI analysiert…</span>';
+            if (btn) btn.disabled  = true;
+            _dotNet.invokeMethodAsync('OnAiPopupRequestAsync', callsign);
+        },
+
+        updatePopupAiContent: function (callsign, html) {
+            var safeId = callsign.replace(/[^a-zA-Z0-9]/g, '-');
+            var el  = document.getElementById('ai-result-' + safeId);
+            var btn = document.getElementById('ai-btn-'    + safeId);
+            if (el)  el.innerHTML  = html;
+            if (btn) { btn.disabled = false; btn.textContent = '🤖 KI-Info'; }
+        },
+
+        // ── Reichweiten-Wolke ─────────────────────────────────────────────
+        // measuredPoints : [[lat,lon],…]  – real heard stations (blue hull)
+        // topoPoints     : [[lat,lon],…]  – LOS prediction polygon (yellow)
+        // ownLat/ownLon  : own position (included in measured hull)
+
+        setCoverage: function (measuredPoints, topoPoints, ownLat, ownLon) {
+            if (!_map) return;
+            _coverageLayer.clearLayers();
+
+            if (!measuredPoints && !topoPoints) {
+                if (_map.hasLayer(_coverageLayer)) _map.removeLayer(_coverageLayer);
+                return;
+            }
+
+            // ── Topo prediction polygon (yellow, drawn first = below) ──
+            if (topoPoints && topoPoints.length >= 3) {
+                var topoLatLngs = topoPoints.map(function(p) { return [p[0], p[1]]; });
+                // fill
+                L.polygon(topoLatLngs, {
+                    color:       '#f0c060',
+                    weight:      0,
+                    fillColor:   '#f0c060',
+                    fillOpacity: 0.10,
+                    interactive: false
+                }).addTo(_coverageLayer);
+                // border
+                L.polygon(topoLatLngs, {
+                    color:       '#f0c060',
+                    weight:      1.5,
+                    opacity:     0.55,
+                    fill:        false,
+                    dashArray:   '4,5',
+                    interactive: false
+                }).bindTooltip('📶 Topografie-Prognose (LOS)', { sticky: true, className: 'relay-tooltip' })
+                  .addTo(_coverageLayer);
+            }
+
+            // ── Measured hull (blue, drawn on top) ────────────────────
+            var pts = (measuredPoints || []).slice();
+            if (ownLat != null && ownLon != null) pts.push([ownLat, ownLon]);
+
+            if (pts.length >= 3) {
+                var hull    = convexHull(pts);
+                var latlngs = hull.map(function(p) { return [p[0], p[1]]; });
+                // fill
+                L.polygon(latlngs, {
+                    color:       '#4dabf7',
+                    weight:      0,
+                    fillColor:   '#4dabf7',
+                    fillOpacity: 0.12,
+                    interactive: false
+                }).addTo(_coverageLayer);
+                // border
+                L.polygon(latlngs, {
+                    color:       '#4dabf7',
+                    weight:      2,
+                    opacity:     0.65,
+                    fill:        false,
+                    dashArray:   '6,4',
+                    interactive: false
+                }).bindTooltip('📡 Gemessene Reichweite', { sticky: true, className: 'relay-tooltip' })
+                  .addTo(_coverageLayer);
+            }
+
+            if (!_map.hasLayer(_coverageLayer))
+                _coverageLayer.addTo(_map);
+        },
     };
+
+    // ── Convex Hull (Gift Wrapping) ───────────────────────────────────────
+    function convexHull(points) {
+        if (points.length < 3) return points;
+        // Find leftmost point
+        var start = 0;
+        for (var i = 1; i < points.length; i++)
+            if (points[i][1] < points[start][1]) start = i;
+
+        var hull = [];
+        var cur  = start;
+        do {
+            hull.push(points[cur]);
+            var next = 0;
+            for (var j = 1; j < points.length; j++) {
+                if (next === cur) { next = j; continue; }
+                var cross = crossProduct(points[cur], points[next], points[j]);
+                if (cross < 0) next = j;
+                else if (cross === 0 &&
+                         dist(points[cur], points[j]) > dist(points[cur], points[next]))
+                    next = j;
+            }
+            cur = next;
+        } while (cur !== start && hull.length <= points.length);
+        return hull;
+    }
+
+    function crossProduct(o, a, b) {
+        return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+    }
+
+    function dist(a, b) {
+        var dx = a[0]-b[0], dy = a[1]-b[1];
+        return dx*dx + dy*dy;
+    }
+
+    // keep old closing line replaced above
 })();
