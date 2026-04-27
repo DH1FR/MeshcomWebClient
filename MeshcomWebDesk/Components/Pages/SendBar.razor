@@ -34,8 +34,7 @@
                   spellcheck="true"
                   autocomplete="on"
                   lang="de"
-                  rows="1"
-                  @onkeydown="OnKeyDown"></textarea>
+                  rows="1"></textarea>
         <span class="char-counter">0/149</span>
         <button class="btn-send" @onclick="SendAsync">
             @Loc.T("Senden", "Send", "Invia", "Enviar")
@@ -71,7 +70,10 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            await JS.InvokeVoidAsync("meshcomChat.initSendBarCounter", "send-bar-input");
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("meshcomChat.initSendBarCounter", "send-bar-input", _dotNetRef);
+        }
 
         if (_flyoutOpen && _quickTexts.Count > 0)
         {
@@ -141,7 +143,8 @@
         await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
     }
 
-    private async Task SendAsync()
+    [JSInvokable]
+    public async Task JsSendAsync()
     {
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
@@ -152,21 +155,15 @@
         await OnSend.InvokeAsync(text);
     }
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
+    [JSInvokable]
+    public async Task<string> JsExpandVariables(string text)
     {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await SendAsync();
-        }
-        else if (e.Key == "Tab")
-        {
-            _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
-            if (_text.Contains('{'))
-            {
-                var expanded = UdpService.ExpandVariables(_text, Callsign);
-                _text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
-                await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
-            }
-        }
+        var expanded = UdpService.ExpandVariables(text, Callsign);
+        return expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
+    }
+
+    private async Task SendAsync()
+    {
+        await JsSendAsync();
     }
 }

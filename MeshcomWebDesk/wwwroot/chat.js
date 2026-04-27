@@ -229,10 +229,12 @@ window.meshcomChat = (function () {
         },
 
         // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
-        initSendBarCounter: (id) => {
+        initSendBarCounter: (id, dotNetRef) => {
             var el = document.getElementById(id);
             if (!el || el.dataset.counterInit) return;
             el.dataset.counterInit = '1';
+
+            // Live-Counter
             el.addEventListener('input', function () {
                 var bar     = el.closest('.send-bar');
                 var counter = bar && bar.querySelector('.char-counter');
@@ -240,6 +242,28 @@ window.meshcomChat = (function () {
                 var len = el.value.length;
                 counter.textContent = len + '/149';
                 counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            });
+
+            // Keyboard: Enter = senden, Tab = Variablen expandieren – KEIN Blazor @onkeydown
+            el.addEventListener('keydown', async function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (dotNetRef) await dotNetRef.invokeMethodAsync('JsSendAsync');
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    if (dotNetRef && el.value.includes('{')) {
+                        var expanded = await dotNetRef.invokeMethodAsync('JsExpandVariables', el.value);
+                        el.value = expanded;
+                        // Counter aktualisieren
+                        var bar     = el.closest('.send-bar');
+                        var counter = bar && bar.querySelector('.char-counter');
+                        if (counter) {
+                            var len = expanded.length;
+                            counter.textContent = len + '/149';
+                            counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+                        }
+                    }
+                }
             });
         }
     };
