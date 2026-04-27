@@ -31,6 +31,7 @@
         <input @bind="_text" @bind:event="oninput"
                placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
                maxlength="149"
+               spellcheck="true"
                @onkeydown="OnKeyDown" />
         <span class="char-counter @CounterCss">@_text.Length/149</span>
         <button class="btn-send" @onclick="SendAsync"
