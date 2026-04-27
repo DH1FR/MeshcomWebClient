@@ -510,7 +510,7 @@ public sealed class QsoSummaryService
         CancellationToken ct = default)
     {
         // Note: ORDER BY ASC → oldest message first (chronological)
-        if (!IsDbAvailable(out var db, out _))
+        if (!IsDbOnlyAvailable(out var db))
             return ([], 0);
 
         try
@@ -575,7 +575,7 @@ public sealed class QsoSummaryService
         int       pageSize = 50,
         CancellationToken ct = default)
     {
-        if (!IsDbAvailable(out var db, out _))
+        if (!IsDbOnlyAvailable(out var db))
             return ([], 0);
 
         if (string.IsNullOrWhiteSpace(searchTerm))
@@ -894,6 +894,17 @@ public sealed class QsoSummaryService
         ai = s.Ai;
         return ai.Enabled
             && db.Provider == DatabaseSettings.ProviderMySql
+            && !string.IsNullOrWhiteSpace(db.MySqlConnectionString);
+    }
+
+    /// <summary>
+    /// DB availability check without requiring AI to be enabled.
+    /// Used for history and text search which work independently of AI.
+    /// </summary>
+    private bool IsDbOnlyAvailable(out DatabaseSettings db)
+    {
+        db = _settings.CurrentValue.Database;
+        return db.Provider == DatabaseSettings.ProviderMySql
             && !string.IsNullOrWhiteSpace(db.MySqlConnectionString);
     }
 

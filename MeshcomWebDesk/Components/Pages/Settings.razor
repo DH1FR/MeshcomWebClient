@@ -34,10 +34,6 @@
             @Loc.T("(Serilog) erfordern einen Neustart der Anwendung.", "(Serilog) require an application restart.", "(Serilog) richiedono il riavvio dell'app.", "(Serilog) requieren reiniciar la aplicación.")
         </div>
 
-        @if (_saved)
-        {
-            <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.", "Impostazioni salvate.", "Ajustes guardados.")</div>
-        }
         @if (_errorMessage != null)
         {
             <div class="settings-error">❌ @Loc.T("Fehler:", "Error:", "Errore:", "Error:") @_errorMessage</div>
@@ -1253,6 +1249,10 @@
         </div>
 
         <div class="settings-actions">
+            @if (_saved)
+            {
+                <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.", "Impostazioni salvate.", "Ajustes guardados.")</div>
+            }
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
         </div>
 

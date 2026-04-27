@@ -1820,8 +1820,13 @@ h1:focus {
 
 .settings-actions {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    gap: 0.5rem;
     padding-top: 0.25rem;
+}
+
+.settings-actions .btn-save {
+    align-self: flex-end;
 }
 
 .btn-save {
@@ -2526,9 +2531,14 @@ h1:focus {
 }
 
 .qso-summary-hint {
+    display: flex;
+    gap: 0.4em;
+    align-items: flex-start;
+    width: 100%;
     color: #8b949e;
     font-style: italic;
     font-size: 13px;
+    text-align: left;
 }
 
 /* ── QSO Modal Tabs ───────────────────────────────────── */

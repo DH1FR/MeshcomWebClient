@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @using MeshcomWebDesk.Helpers
@@ -50,10 +50,10 @@
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
                     }
-                    @if (tab.HasQsoSummary)
+                    @if (QsoSummaryService.IsDbReady && tab.Key != "*" && !tab.Key.StartsWith('#'))
                     {
-                        <span class="tab-ai-icon" title="@Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available", "Riepilogo QSO disponibile", "Resumen QSO disponible")"
-                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🤖</span>
+                        <span class="tab-ai-icon" title="@(tab.HasQsoSummary ? Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available", "Riepilogo QSO disponibile", "Resumen QSO disponible") : Loc.T("QSO-Verlauf & Suche", "QSO History & Search", "Cronologia & ricerca QSO", "Historial & búsqueda QSO"))"
+                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🔎</span>
                     }
                     <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
@@ -443,8 +443,10 @@
 
             <!-- Tab Navigation -->
             <div class="qso-modal-tabs">
-                <button class="qso-modal-tab @(_qsoModalTab == 0 ? "active" : "")" @onclick='() => SwitchModalTab(0)'>
-                    📋 @Loc.T("Zusammenfassung", "Summary", "Riepilogo", "Resumen")
+                <button class="qso-modal-tab @(_qsoModalTab == 0 ? "active" : "")" @onclick='() => SwitchModalTab(0)'
+                        disabled="@(!IsAiActive)"
+                        title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
+                    📋 @Loc.T("KI-Zusammenfassung", "AI Summary", "Riepilogo IA", "Resumen IA")
                 </button>
                 <button class="qso-modal-tab @(_qsoModalTab == 1 ? "active" : "")" @onclick='() => SwitchModalTab(1)'>
                     📜 @Loc.T("Verlauf", "History", "Cronologia", "Historial")
@@ -452,13 +454,15 @@
                 <button class="qso-modal-tab @(_qsoModalTab == 2 ? "active" : "")" @onclick='() => SwitchModalTab(2)'>
                     🔎 @Loc.T("Suche", "Search", "Cerca", "Buscar")
                 </button>
-                <button class="qso-modal-tab @(_qsoModalTab == 3 ? "active" : "")" @onclick='() => SwitchModalTab(3)'>
-                    🤖 @Loc.T("KI-Suche", "AI Search", "Ricerca IA", "Búsqueda IA")
+                <button class="qso-modal-tab @(_qsoModalTab == 3 ? "active" : "")" @onclick='() => SwitchModalTab(3)'
+                        disabled="@(!IsAiActive)"
+                        title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
+                    🔎 @Loc.T("KI-Suche", "AI Search", "Ricerca IA", "Búsqueda IA")
                 </button>
             </div>
 
             <!-- Tab 0: Summary -->
-            @if (_qsoModalTab == 0)
+            @if (_qsoModalTab == 0 && IsAiActive)
             {
                 @if (_qsoSummaryLoading)
                 {
@@ -487,7 +491,8 @@
                     }
                 </div>
                 <div class="qso-summary-footer">
-                    <button class="btn-action" @onclick="RegenerateQsoSummaryAsync" disabled="@_qsoSummaryLoading">
+                    <button class="btn-action" @onclick="RegenerateQsoSummaryAsync" disabled="@(_qsoSummaryLoading || !IsAiActive)"
+                            title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
                         @if (_qsoSummaryLoading)
                         {
                             <span>⏳ @Loc.T("Wird generiert…", "Generating…", "Generazione…", "Generando…")</span>
@@ -624,7 +629,7 @@
             }
 
             <!-- Tab 3: AI Search -->
-            @if (_qsoModalTab == 3)
+            @if (_qsoModalTab == 3 && IsAiActive)
             {
                 <div class="qso-history-filter">
                     <span style="color:#8b949e;font-size:11px">@Loc.T("Zeitraum (optional):", "Period (optional):", "Periodo (opz.):", "Período (opc.):")</span>
@@ -637,8 +642,8 @@
                     }
                 </div>
                 <div style="padding:8px 14px;display:flex;gap:8px">
-                    <input type="text" value="@_searchQuery"
-                           @oninput="e => _searchQuery = e.Value?.ToString() ?? string.Empty"
+                    <input type="text" id="ai-search-input"
+                           @bind="_searchQuery" @bind:event="onchange"
                            @onkeydown="OnSearchKeyDown"
                            placeholder="@Loc.T("Frage stellen z.B. 'Was hat mir Jürgen empfohlen?'", "Ask e.g. 'What did Jürgen recommend to me?'", "Domanda es. 'Cosa mi ha consigliato?'", "Pregunta p.ej. '¿Qué me recomendó?'")"
                            style="flex:1" />
@@ -658,11 +663,12 @@
                     else
                     {
                         <div class="qso-summary-hint">
-                            💡 @Loc.T(
+                            <span>💡</span>
+                            <span>@Loc.T(
                                 "Stelle eine Frage zum Gespraechsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
                                 "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
                                 "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
-                                "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")
+                                "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")</span>
                         </div>
                     }
                     @if (_aiSearchError != null)
@@ -828,13 +834,13 @@
     private bool _playWatchlistSound;
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
-    [Inject] private IOptions<MeshcomSettings> SettingsOptions { get; set; } = default!;
+    [Inject] private IOptionsMonitor<MeshcomSettings> SettingsOptions { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
     protected override void OnInitialized()
     {
         Loc.OnChange += StateHasChanged;
-        _settings = SettingsOptions.Value;
+        _settings = SettingsOptions.CurrentValue;
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
@@ -1197,7 +1203,7 @@
 
     private string QrzSuffix(string callsign)
     {
-        if (!SettingsOptions.Value.Qrz.Enabled) return string.Empty;
+        if (!SettingsOptions.CurrentValue.Qrz.Enabled) return string.Empty;
         if (!_qrzData.TryGetValue(callsign, out var info) || info is null) return string.Empty;
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(info.FirstName)) parts.Add(info.FirstName);
@@ -1207,14 +1213,14 @@
 
     private string? QrzFirstName(string callsign)
     {
-        if (!SettingsOptions.Value.Qrz.Enabled) return null;
+        if (!SettingsOptions.CurrentValue.Qrz.Enabled) return null;
         var fn = _qrzData.GetValueOrDefault(callsign)?.FirstName;
         return string.IsNullOrEmpty(fn) ? null : fn;
     }
 
     private async Task<bool> LoadQrzDataAsync()
     {
-        if (!SettingsOptions.Value.Qrz.Enabled) return false;
+        if (!SettingsOptions.CurrentValue.Qrz.Enabled) return false;
         var added = false;
         var callsigns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var m in _allMessages)
@@ -1256,14 +1262,23 @@
         _qsoSummaryTab      = tab;
         _qsoSummaryCallsign = tab.QsoSummaryCallsignBase ?? tab.Key;
         _qsoSummaryError    = null;
-        _qsoSummaryLoading  = true;
+        _qsoSummaryLoading  = IsAiActive;
         _qsoSummaryVisible  = true;
         _qsoSummaryRecord   = null;
+        // Ohne KI direkt auf Verlauf-Tab öffnen
+        _qsoModalTab        = IsAiActive ? 0 : 1;
         StateHasChanged();
 
-        _qsoSummaryRecord  = await QsoSummaryService.GetSummaryAsync(_qsoSummaryCallsign);
-        _qsoSummaryLoading = false;
-        StateHasChanged();
+        if (IsAiActive)
+        {
+            _qsoSummaryRecord  = await QsoSummaryService.GetSummaryAsync(_qsoSummaryCallsign);
+            _qsoSummaryLoading = false;
+            StateHasChanged();
+        }
+        else
+        {
+            await LoadHistoryAsync();
+        }
     }
 
     private void CloseQsoSummary()
@@ -1303,6 +1318,7 @@
 
     private async Task SwitchModalTab(int tab)
     {
+        if ((tab == 0 || tab == 3) && !IsAiActive) return;
         _qsoModalTab = tab;
         if (tab == 1 && _historyMessages.Count == 0)
             await LoadHistoryAsync();
@@ -1418,6 +1434,8 @@
 
     // ── AI Search tab ─────────────────────────────────────────────────────
 
+    private bool IsAiActive => SettingsOptions.CurrentValue.Ai.Enabled && !string.IsNullOrWhiteSpace(SettingsOptions.CurrentValue.Ai.ApiKey);
+
     private async Task RunAiSearchAsync()
     {
         Logger.LogInformation("Chat: RunAiSearchAsync called – query='{Q}', callsign='{C}'",
@@ -1454,7 +1472,13 @@
 
     private async Task OnSearchKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter") await RunAiSearchAsync();
+        if (e.Key == "Enter")
+        {
+            // Read current input value directly (no server round-trip on every keystroke)
+            try { _searchQuery = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "ai-search-input"); }
+            catch (JSException) { }
+            await RunAiSearchAsync();
+        }
     }
 
     private void ApplyTabOrder()
@@ -1512,11 +1536,11 @@
                 }
                 StateHasChanged();
             });
-            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.Value.WatchAlertMinutes) * 60 + 2));
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes) * 60 + 2));
             if (!_disposed)
                 await InvokeAsync(() =>
                 {
-                    var limit = Math.Max(1, SettingsOptions.Value.WatchAlertMinutes);
+                    var limit = Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes);
                     _watchlistAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
                     StateHasChanged();
                 });
@@ -1742,7 +1766,7 @@
         ? Loc.T("MQTT: verbunden", "MQTT: connected", "MQTT: connesso", "MQTT: conectado")
         : Loc.T("MQTT: nicht verbunden", "MQTT: not connected", "MQTT: non connesso", "MQTT: no conectado");
 
-    private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
+    private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.CurrentValue.TimeOffsetHours);
 
     /// <summary>
     /// Returns the date prefix "dd.MM." when <paramref name="dt"/> is not today, otherwise null.
