@@ -32,6 +32,8 @@
                   placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
                   maxlength="149"
                   spellcheck="true"
+                  autocomplete="on"
+                  lang="de"
                   rows="1"
                   @onkeydown="OnKeyDown"></textarea>
         <span class="char-counter @CounterCss">@_text.Length/149</span>
