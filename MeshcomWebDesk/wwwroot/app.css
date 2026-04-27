@@ -516,7 +516,8 @@ h1:focus {
     min-width: 0;
 }
 
-.send-bar input {
+.send-bar input,
+.send-bar textarea {
     flex: 1;
     padding: 8px 12px;
     border: 1px solid #0f3460;
@@ -524,9 +525,16 @@ h1:focus {
     background: #1a1a2e;
     color: #e0e0e0;
     font-size: 14px;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.4;
+    min-height: 36px;
+    max-height: 36px;
+    font-family: inherit;
 }
 
-.send-bar input:focus {
+.send-bar input:focus,
+.send-bar textarea:focus {
     outline: none;
     border-color: #2d6a4f;
 }

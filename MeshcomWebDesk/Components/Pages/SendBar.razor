@@ -28,11 +28,12 @@
                     @onclick="ToggleFlyout"
                     title="@Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")">⚡</button>
         }
-        <input @bind="_text" @bind:event="oninput"
-               placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
-               maxlength="149"
-               spellcheck="true"
-               @onkeydown="OnKeyDown" />
+        <textarea @bind="_text" @bind:event="oninput"
+                  placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
+                  maxlength="149"
+                  spellcheck="true"
+                  rows="1"
+                  @onkeydown="OnKeyDown"></textarea>
         <span class="char-counter @CounterCss">@_text.Length/149</span>
         <button class="btn-send" @onclick="SendAsync"
                 disabled="@(!CanSend)">
@@ -155,7 +156,7 @@
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !e.ShiftKey)
         {
             await SendAsync();
         }
