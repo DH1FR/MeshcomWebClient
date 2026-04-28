@@ -2415,6 +2415,17 @@ h1:focus {
     background: #2d333b;
     color: #c9d1d9;
 }
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.welcome-btn-dismiss:hover {
+    background: #2d333b;
+    color: #c9d1d9;
+}
 
 }
 
