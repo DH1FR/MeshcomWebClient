@@ -757,7 +757,7 @@
     private bool _soundEnabled = true;
     private bool? _voiceEnabled;   // null = not yet loaded from localStorage
     private bool _playSound;
-    private string? _pendingSpeechText;
+    private readonly Queue<string> _pendingSpeech = new();
 
     // Recent partners flyout
     private bool _showRecentPartners;
@@ -954,11 +954,9 @@
             catch (JSException) { }
         }
 
-        if (_pendingSpeechText != null)
+        if (_pendingSpeech.TryDequeue(out var speechText))
         {
-            var text = _pendingSpeechText;
-            _pendingSpeechText = null;
-            try { await JS.InvokeVoidAsync("speakText", text, Loc.Current); }
+            try { await JS.InvokeVoidAsync("speakText", speechText, Loc.Current); }
             catch (JSException) { }
         }
     }
@@ -1071,7 +1069,11 @@
             $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}",
             $"Messaggio da {phonetic}{(firstName != null ? ". " + firstName : "")}",
             $"Mensaje de {phonetic}{(firstName != null ? ". " + firstName : "")}");
-        _pendingSpeechText = text;
+        // Direct message has highest priority – prepend before any watchlist entries
+        var existing = _pendingSpeech.ToArray();
+        _pendingSpeech.Clear();
+        _pendingSpeech.Enqueue(text);
+        foreach (var e in existing) _pendingSpeech.Enqueue(e);
         InvokeAsync(StateHasChanged);
     }
 
@@ -1528,11 +1530,11 @@
                 if (_voiceEnabled == true)
                 {
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
-                    _pendingSpeechText = Loc.T(
+                    _pendingSpeech.Enqueue(Loc.T(
                         $"{phonetic} ist aktiv",
                         $"{phonetic} heard",
                         $"{phonetic} ascoltato",
-                        $"{phonetic} escuchado");
+                        $"{phonetic} escuchado"));
                 }
                 StateHasChanged();
             });
