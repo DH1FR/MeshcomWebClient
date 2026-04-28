@@ -11,6 +11,7 @@
 @inject IJSRuntime JS
 @inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
+@inject NavigationManager Nav
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -1350,7 +1351,7 @@
             {
                 <div class="settings-error" style="margin-top:0.5rem">❌ @_backupError</div>
             }
-            @if (_backupSuccess)
+            @if (_backupSuccess || _restored)
             {
                 <div class="settings-success" style="margin-top:0.5rem">
                     ✅ @Loc.T("Erfolgreich.", "Success.", "Operazione riuscita.", "Correcto.")
@@ -1372,6 +1373,7 @@
 @code {
     private FormModel _model = new();
     private bool _saved;
+    private bool _restored;
     private string? _errorMessage;
     private bool   _sendingNow;
     private string? _sendResult;
@@ -1863,6 +1865,11 @@
     {
         Loc.OnChange += StateHasChanged;
         var s = SettingsMonitor.CurrentValue;
+        // Check if we arrived here after a successful backup restore
+        var uri   = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _restored = query["restored"] == "1";
+        if (_restored) _openSections.Add("backup");
         _model = new FormModel
         {
             ListenIp            = s.ListenIp,
@@ -2443,10 +2450,10 @@
                 QuickTexts  = s.QuickTexts.Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text }).ToList(),
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
-            await SaveAsync();
-            _backupSuccess   = true;
-            _restorePassword = string.Empty;
-            StateHasChanged();
+            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+            // Reload page – file-watcher triggers config reload which drops the SignalR
+            // connection; navigating first ensures a clean reconnect with success feedback.
+            Nav.NavigateTo("/settings?restored=1", forceLoad: true);
         }
         catch (Exception ex)
         {
