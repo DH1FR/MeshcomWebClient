@@ -2194,42 +2194,44 @@
         try
         {
             // Serialize current settings to JSON (all fields incl. sensitive ones)
-            var settings = _model.ToSettings();
-            var json     = System.Text.Json.JsonSerializer.Serialize(
-                settings,
-                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var settings  = _model.ToSettings();
+            var json      = System.Text.Json.JsonSerializer.Serialize(
+                settings, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             var plaintext = System.Text.Encoding.UTF8.GetBytes(json);
+            var password  = _backupPassword;
 
-            // Derive key with PBKDF2 (100 000 iterations, SHA-256, 32-byte key)
-            var salt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
-            using var kdf  = new System.Security.Cryptography.Rfc2898DeriveBytes(
-                _backupPassword, salt, 100_000,
-                System.Security.Cryptography.HashAlgorithmName.SHA256);
-            var key = kdf.GetBytes(32);
+            // Run CPU-intensive crypto on thread-pool so SignalR heartbeat is not blocked
+            var file = await Task.Run(() =>
+            {
+                var salt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
+                using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                    password, salt, 100_000,
+                    System.Security.Cryptography.HashAlgorithmName.SHA256);
+                var key = kdf.GetBytes(32);
 
-            // Encrypt with AES-256-CBC
-            using var aes = System.Security.Cryptography.Aes.Create();
-            aes.KeySize = 256;
-            aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
-            aes.Key     = key;
-            aes.GenerateIV();
-            var iv = aes.IV;
+                using var aes = System.Security.Cryptography.Aes.Create();
+                aes.KeySize = 256;
+                aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
+                aes.Key     = key;
+                aes.GenerateIV();
+                var iv = aes.IV;
 
-            using var ms        = new System.IO.MemoryStream();
-            using var encryptor = aes.CreateEncryptor();
-            using var cs        = new System.Security.Cryptography.CryptoStream(
-                ms, encryptor, System.Security.Cryptography.CryptoStreamMode.Write);
-            await cs.WriteAsync(plaintext);
-            await cs.FlushFinalBlockAsync();
-            var ciphertext = ms.ToArray();
+                using var ms        = new System.IO.MemoryStream();
+                using var encryptor = aes.CreateEncryptor();
+                using var cs        = new System.Security.Cryptography.CryptoStream(
+                    ms, encryptor, System.Security.Cryptography.CryptoStreamMode.Write);
+                cs.Write(plaintext);
+                cs.FlushFinalBlock();
+                var ciphertext = ms.ToArray();
 
-            // Build file: [magic(4)] [salt(16)] [iv(16)] [ciphertext]
-            var file = new byte[BackupMagic.Length + salt.Length + iv.Length + ciphertext.Length];
-            var pos  = 0;
-            BackupMagic.CopyTo(file, pos); pos += BackupMagic.Length;
-            salt.CopyTo(file, pos);        pos += salt.Length;
-            iv.CopyTo(file, pos);          pos += iv.Length;
-            ciphertext.CopyTo(file, pos);
+                var result = new byte[BackupMagic.Length + salt.Length + iv.Length + ciphertext.Length];
+                var pos    = 0;
+                BackupMagic.CopyTo(result, pos); pos += BackupMagic.Length;
+                salt.CopyTo(result, pos);        pos += salt.Length;
+                iv.CopyTo(result, pos);          pos += iv.Length;
+                ciphertext.CopyTo(result, pos);
+                return result;
+            });
 
             await JS.InvokeVoidAsync("meshcomChat.downloadBinary",
                 "MeshComWebDesk-settings.enc", file);
@@ -2284,32 +2286,41 @@
             var salt = file[pos..(pos + 16)]; pos += 16;
             var iv   = file[pos..(pos + 16)]; pos += 16;
             var ciphertext = file[pos..];
+            var password   = _restorePassword;
 
-            // Derive key
-            using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
-                _restorePassword, salt, 100_000,
-                System.Security.Cryptography.HashAlgorithmName.SHA256);
-            var key = kdf.GetBytes(32);
-
-            // Decrypt
-            using var aes = System.Security.Cryptography.Aes.Create();
-            aes.KeySize = 256;
-            aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
-            aes.Key     = key;
-            aes.IV      = iv;
-
-            byte[] plaintext;
-            try
+            // Run CPU-intensive PBKDF2 + AES on thread-pool so SignalR heartbeat is not blocked
+            byte[]? plaintext = null;
+            string? cryptoError = null;
+            await Task.Run(() =>
             {
-                using var ms        = new System.IO.MemoryStream();
-                using var decryptor = aes.CreateDecryptor();
-                using var cs        = new System.Security.Cryptography.CryptoStream(
-                    ms, decryptor, System.Security.Cryptography.CryptoStreamMode.Write);
-                await cs.WriteAsync(ciphertext);
-                await cs.FlushFinalBlockAsync();
-                plaintext = ms.ToArray();
-            }
-            catch (System.Security.Cryptography.CryptographicException)
+                try
+                {
+                    using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                        password, salt, 100_000,
+                        System.Security.Cryptography.HashAlgorithmName.SHA256);
+                    var key = kdf.GetBytes(32);
+
+                    using var aes = System.Security.Cryptography.Aes.Create();
+                    aes.KeySize = 256;
+                    aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
+                    aes.Key     = key;
+                    aes.IV      = iv;
+
+                    using var ms        = new System.IO.MemoryStream();
+                    using var decryptor = aes.CreateDecryptor();
+                    using var cs        = new System.Security.Cryptography.CryptoStream(
+                        ms, decryptor, System.Security.Cryptography.CryptoStreamMode.Write);
+                    cs.Write(ciphertext);
+                    cs.FlushFinalBlock();
+                    plaintext = ms.ToArray();
+                }
+                catch (System.Security.Cryptography.CryptographicException)
+                {
+                    cryptoError = "crypto";
+                }
+            });
+
+            if (cryptoError != null)
             {
                 _backupError = Loc.T(
                     "Entschlüsselung fehlgeschlagen – falsches Passwort oder beschädigte Datei.",
@@ -2320,7 +2331,7 @@
                 return;
             }
 
-            var json = System.Text.Encoding.UTF8.GetString(plaintext);
+            var json = System.Text.Encoding.UTF8.GetString(plaintext!);
 
             MeshcomSettings? imported;
             try
