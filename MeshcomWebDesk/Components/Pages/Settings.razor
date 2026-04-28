@@ -1341,8 +1341,7 @@
                     <label class="btn-action" style="cursor:pointer"
                            title="@Loc.T("MeshComWebDesk-settings.enc öffnen", "Open MeshComWebDesk-settings.enc", "Apri MeshComWebDesk-settings.enc", "Abrir MeshComWebDesk-settings.enc")">
                         📥 @Loc.T("Backup wiederherstellen", "Restore Backup", "Ripristina backup", "Restaurar copia de seguridad")
-                        <input type="file" id="import-settings" accept=".enc" style="display:none"
-                               @onchange="ImportSettingsAsync" />
+                        <InputFile accept=".enc" style="display:none" OnChange="ImportSettingsAsync" />
                     </label>
                 </div>
             </div>
@@ -2245,7 +2244,7 @@
         }
     }
 
-    private async Task ImportSettingsAsync()
+    private async Task ImportSettingsAsync(InputFileChangeEventArgs e)
     {
         _backupError   = null;
         _backupSuccess = false;
@@ -2264,10 +2263,14 @@
 
         try
         {
-            var bytes = await JS.InvokeAsync<int[]?>("meshcomChat.readBinaryFile", "import-settings");
-            if (bytes is null || bytes.Length == 0) return;
+            var browserFile = e.File;
+            if (browserFile is null) return;
 
-            var file = bytes.Select(b => (byte)b).ToArray();
+            // Read file directly via Blazor IBrowserFile – avoids JS-interop SignalR size limit
+            using var stream = browserFile.OpenReadStream(maxAllowedSize: 1024 * 1024); // 1 MB max
+            using var ms     = new System.IO.MemoryStream();
+            await stream.CopyToAsync(ms);
+            var file = ms.ToArray();
 
             // Validate magic header
             if (file.Length < BackupMagic.Length + 16 + 16 + 1 ||
