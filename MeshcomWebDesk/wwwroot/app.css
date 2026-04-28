@@ -140,7 +140,18 @@ h1:focus {
 }
 
 .tab-recent-btn {
+    background: #0f3460;
+    color: #a0c4ff;
     font-size: 13px;
+}
+
+.tab-recent-btn:hover {
+    background: #1a4a8a;
+}
+
+.tab-recent-btn.active {
+    background: #1a1a2e;
+    color: #fff;
 }
 
 .tab-new-wrap {
