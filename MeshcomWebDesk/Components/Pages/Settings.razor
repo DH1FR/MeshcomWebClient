@@ -272,15 +272,14 @@
                                             ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
                                             : Loc.T("Variablen anzeigen", "Show Variables", "Mostra variabili", "Mostrar variables"))
                                     </button>
-                                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportBotCommandsAsync"
-                                            title="@Loc.T("Als MeshComWebDesk-bot-commands.json herunterladen", "Download as MeshComWebDesk-bot-commands.json", "Scarica come MeshComWebDesk-bot-commands.json", "Descargar como MeshComWebDesk-bot-commands.json")">
+                                    <input type="text" @bind="_filenameBotCommands" style="width:220px;font-size:12px;padding:2px 6px" />
+                                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportBotCommandsAsync">
                                         📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
                                     </button>
                                     <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
                                            title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
                                         📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
-                                        <input type="file" id="import-bot" accept=".json" style="display:none"
-                                               @onchange="ImportBotCommandsAsync" />
+                                        <InputFile accept=".json" style="display:none" OnChange="ImportBotCommandsAsync" />
                                     </label>
                                 </div>
                                 @if (_importError != null)
@@ -1001,15 +1000,14 @@
                         ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
                         : Loc.T("Verfügbare Variablen", "Available Variables", "Variabili disponibili", "Variables disponibles"))
                 </button>
-                <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportQuickTextsAsync"
-                        title="@Loc.T("Als MeshComWebDesk-quick-texts.json herunterladen", "Download as MeshComWebDesk-quick-texts.json", "Scarica come MeshComWebDesk-quick-texts.json", "Descargar como MeshComWebDesk-quick-texts.json")">
+                <input type="text" @bind="_filenameQuickTexts" style="width:220px;font-size:12px;padding:2px 6px" />
+                <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportQuickTextsAsync">
                     📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
                 </button>
                 <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
                        title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
                     📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
-                    <input type="file" id="import-quicktexts" accept=".json" style="display:none"
-                           @onchange="ImportQuickTextsAsync" />
+                    <InputFile accept=".json" style="display:none" OnChange="ImportQuickTextsAsync" />
                 </label>
             </div>
             @if (_importError != null)
@@ -1094,15 +1092,14 @@
                             @onclick="() => _model.GroupLabels = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()">
                         🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults", "Ripristina predefiniti", "Restaurar predeterminados")
                     </button>
-                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportGroupLabelsAsync"
-                            title="@Loc.T("Als MeshComWebDesk-group-labels.json herunterladen", "Download as MeshComWebDesk-group-labels.json", "Scarica come MeshComWebDesk-group-labels.json", "Descargar como MeshComWebDesk-group-labels.json")">
+                    <input type="text" @bind="_filenameGroupLabels" style="width:220px;font-size:12px;padding:2px 6px" />
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportGroupLabelsAsync">
                         📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
                     </button>
                     <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
                            title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
                         📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
-                        <input type="file" id="import-groups" accept=".json" style="display:none"
-                               @onchange="ImportGroupLabelsAsync" />
+                        <InputFile accept=".json" style="display:none" OnChange="ImportGroupLabelsAsync" />
                     </label>
                 </div>
                 @if (_importError != null)
@@ -1314,9 +1311,9 @@
                     <input type="password" @bind="_backupPassword" autocomplete="new-password"
                            placeholder="@Loc.T("Passwort für Verschlüsselung", "Encryption password", "Password di cifratura", "Contraseña de cifrado")"
                            style="flex:1;min-width:180px" />
+                    <input type="text" @bind="_filenameBackup" style="width:220px;font-size:12px;padding:2px 6px" />
                     <button class="btn-action" @onclick="ExportSettingsAsync"
-                            disabled="@string.IsNullOrWhiteSpace(_backupPassword)"
-                            title="@Loc.T("Als MeshComWebDesk-settings.enc herunterladen", "Download as MeshComWebDesk-settings.enc", "Scarica come MeshComWebDesk-settings.enc", "Descargar como MeshComWebDesk-settings.enc")">
+                            disabled="@string.IsNullOrWhiteSpace(_backupPassword)">
                         📤 @Loc.T("Backup erstellen", "Create Backup", "Crea backup", "Crear copia de seguridad")
                     </button>
                 </div>
@@ -1988,6 +1985,12 @@
 
     private string? _importError;
 
+    // Export filenames (user-editable, with defaults)
+    private string _filenameBotCommands  = "MeshComWebDesk-bot-commands.json";
+    private string _filenameGroupLabels  = "MeshComWebDesk-group-labels.json";
+    private string _filenameQuickTexts   = "MeshComWebDesk-quick-texts.json";
+    private string _filenameBackup       = "MeshComWebDesk-settings.enc";
+
     // ── Bot Commands ──────────────────────────────────────────────────────
 
     private async Task ExportBotCommandsAsync()
@@ -1997,17 +2000,20 @@
             var json = System.Text.Json.JsonSerializer.Serialize(
                 _model.BotCommands,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            await JS.InvokeVoidAsync("meshcomChat.downloadJson", "MeshComWebDesk-bot-commands.json", json);
+            var fn = string.IsNullOrWhiteSpace(_filenameBotCommands) ? "MeshComWebDesk-bot-commands.json" : _filenameBotCommands;
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", fn, json);
         }
         catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
     }
 
-    private async Task ImportBotCommandsAsync()
+    private async Task ImportBotCommandsAsync(InputFileChangeEventArgs e)
     {
         _importError = null;
         try
         {
-            var json = await JS.InvokeAsync<string?>("meshcomChat.readJsonFile", "import-bot");
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 512 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
             if (string.IsNullOrWhiteSpace(json)) return;
 
             var entries = System.Text.Json.JsonSerializer.Deserialize<List<BotCommandEntry>>(json,
@@ -2056,17 +2062,20 @@
             var json = System.Text.Json.JsonSerializer.Serialize(
                 _model.GroupLabels,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            await JS.InvokeVoidAsync("meshcomChat.downloadJson", "MeshComWebDesk-group-labels.json", json);
+            var fn = string.IsNullOrWhiteSpace(_filenameGroupLabels) ? "MeshComWebDesk-group-labels.json" : _filenameGroupLabels;
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", fn, json);
         }
         catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
     }
 
-    private async Task ImportGroupLabelsAsync()
+    private async Task ImportGroupLabelsAsync(InputFileChangeEventArgs e)
     {
         _importError = null;
         try
         {
-            var json = await JS.InvokeAsync<string?>("meshcomChat.readJsonFile", "import-groups");
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 512 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
             if (string.IsNullOrWhiteSpace(json)) return;
 
             var entries = System.Text.Json.JsonSerializer.Deserialize<List<GroupLabelEntry>>(json,
@@ -2115,17 +2124,20 @@
             var json = System.Text.Json.JsonSerializer.Serialize(
                 _model.QuickTexts,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            await JS.InvokeVoidAsync("meshcomChat.downloadJson", "MeshComWebDesk-quick-texts.json", json);
+            var fn = string.IsNullOrWhiteSpace(_filenameQuickTexts) ? "MeshComWebDesk-quick-texts.json" : _filenameQuickTexts;
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", fn, json);
         }
         catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
     }
 
-    private async Task ImportQuickTextsAsync()
+    private async Task ImportQuickTextsAsync(InputFileChangeEventArgs e)
     {
         _importError = null;
         try
         {
-            var json = await JS.InvokeAsync<string?>("meshcomChat.readJsonFile", "import-quicktexts");
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 512 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
             if (string.IsNullOrWhiteSpace(json)) return;
 
             var entries = System.Text.Json.JsonSerializer.Deserialize<List<QuickTextEntry>>(json,
@@ -2232,8 +2244,8 @@
                 return result;
             });
 
-            await JS.InvokeVoidAsync("meshcomChat.downloadBinary",
-                "MeshComWebDesk-settings.enc", file);
+            var fn = string.IsNullOrWhiteSpace(_filenameBackup) ? "MeshComWebDesk-settings.enc" : _filenameBackup;
+            await JS.InvokeVoidAsync("meshcomChat.downloadBinary", fn, file);
 
             _backupSuccess  = true;
             _backupPassword = string.Empty;
