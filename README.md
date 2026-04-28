@@ -82,6 +82,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
 - **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required
 - **📋 Recent QSO partners** – a 📋 button next to the **+** tab button opens a flyout listing the most recently contacted callsigns (sorted by last contact time); clicking a row opens the chat tab directly; populated from the MySQL database
+- **📤 Export / 📥 Import of Quick Texts** – export the quick-text list as `MeshComWebDesk-quick-texts.json`; import to replace the list; filename editable before export; share presets with other operators
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
@@ -188,6 +189,7 @@ and makes a full web client for MeshCom available via a simple URL
   - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`)
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
+- **📤 Export / 📥 Import** – export all user-defined bot commands as `MeshComWebDesk-bot-commands.json` (browser download); import a previously exported or hand-edited file to replace the current list; filename editable before export
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
 - **Auto-split**: replies longer than 149 characters are automatically split into consecutive packets (2 s pause between parts) – same strategy as multi-bucket telemetry
 - Enabled / disabled via `BotEnabled` – applies **live without restart**
@@ -363,7 +365,18 @@ Clicking it opens a modal dialog with **four tabs**:
 - Pre-filled with the **official MeshCom GRC group list** from [icssw.org/meshcom-grc-gruppen](https://icssw.org/meshcom-grc-gruppen/) covering all European and international groups (EU, DACH, country codes, Italian regions, German regional groups, …)
 - Fully **editable** in **Settings → 🏷️ Group Labels** – add, remove or rename entries
 - **Restore Defaults** button resets the list to the official MeshCom group table
+- **📤 Export / 📥 Import** – export labels as `MeshComWebDesk-group-labels.json`; share with other users or import a community list; filename editable before export
 - Labels are saved in `appsettings.override.json` and apply without restart
+
+### 🔐 Backup & Restore (Settings)
+- **Full encrypted backup** of all settings including passwords and API keys – exported as `MeshComWebDesk-settings.enc` (binary, browser download)
+- **AES-256-CBC encryption** with a user-supplied password; key derived via **PBKDF2 / SHA-256 / 100,000 iterations**
+- File format: `[MCWD magic 4B][Salt 16B][IV 16B][AES ciphertext]` – portable across machines and operating systems
+- **Password is never stored** – if lost, the file cannot be recovered
+- **Import / Restore**: select the `.enc` file and enter the password; settings are decrypted, validated and saved; the page reloads automatically with a success confirmation
+- **Error handling**: wrong password, corrupted file, invalid JSON and missing fields all produce clear error messages
+- **Filename editable** before export (default: `MeshComWebDesk-settings.enc`)
+- Found in **Settings → 🔐 Datensicherung** at the bottom of the settings page
 
 ### 📱 PWA – Progressive Web App
 - **Installable** on any device via the browser's "Add to Home Screen" / "Install" prompt
@@ -1168,11 +1181,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **feat:** 🤖 **KI-Zusammenfassung / KI-Suche locked when AI inactive** – Summary and AI Search tabs are `disabled` with tooltip hint when `Ai.Enabled = false` or no API key is set; guard added in `SwitchModalTab` and template to prevent bypassing; reopens on the History tab when AI is off
 - **feat:** 📋 **Recent QSO partners** – 📋 button next to the + tab button opens a flyout with the most recently contacted callsigns; populated from MySQL; clicking a row opens the chat tab directly
 - **feat:** ✍️ **Browser spell-check** – message input field has `spellcheck="true"`; browser underlines misspelled words when spell-check is enabled in browser settings
+- **feat:** 📤 **Import / Export – Bot Commands, Group Labels, Quick Texts** – each section in Settings has 📤 Export (browser download as `.json`) and 📥 Import (replaces existing entries, with full error handling); filenames are editable before export; files can be shared between users
+- **feat:** 🔐 **Backup & Restore** – full encrypted backup of all settings (including passwords and API keys) as `MeshComWebDesk-settings.enc`; AES-256-CBC + PBKDF2/SHA-256/100k iterations; wrong password and corrupted files produce clear error messages; page reloads automatically after successful restore; filename editable before export
 - **fix:** ⚙️ **Settings – „Einstellungen gespeichert" moved** – success message now appears directly above the Save button instead of at the top of the page; full width display corrected
-- **fix:** 🔎 **AI Search input – slow response fixed** – replaced `@oninput` server round-trip binding with `@bind:event="onchange"` + direct JS value read on Enter; typing is now instant with no Blazor SignalR round-trip per keystroke
 - **fix:** 🤖 **IsAiActive reads live settings** – `IOptions<MeshcomSettings>` replaced with `IOptionsMonitor` in Chat.razor; `IsAiActive` always reads `CurrentValue` so re-enabling AI in Settings is reflected immediately without page reload
 - **fix:** 💾 **QsoSummaryService – History/Search without AI** – `GetHistoryAsync` and `TextSearchAsync` now use a new `IsDbOnlyAvailable()` check (MySQL configured, no `ai.Enabled` requirement) so Verlauf and Suche work even when KI is disabled
-- **docs:** 📖 **README** – QSO dialog section fully rewritten; History, Text Search, AI Search and AI Summary documented as separate tabs; step-by-step AI setup guide added; Recent Partners and spell-check added to feature list
+- **fix:** 🔐 **Backup – PBKDF2 on thread-pool** – CPU-intensive key derivation moved to `Task.Run()` to prevent blocking the SignalR heartbeat and disconnecting the browser
+- **fix:** 🔐 **Backup Import – Blazor InputFile** – replaced JS-interop `int[]` file read (which exceeded the SignalR 32 KB message limit) with Blazor's `InputFile` component; connection no longer drops on file selection
+- **docs:** 📖 **README** – QSO dialog section fully rewritten; Import/Export and Backup & Restore documented; History, Text Search, AI Search and AI Summary documented as separate tabs; step-by-step AI setup guide added
 
 ### v1.8.2
 - **feat:** 📡 **Reichweite (Coverage)** – Kontrast der gemessenen Reichweiten-Fläche erhöht (`fillOpacity` 0.12 → 0.35, Randlinie weight 2 → 3, opacity 0.65 → 0.95); Topo-Prognose (ungenau) vollständig entfernt
