@@ -2337,6 +2337,14 @@
                 return;
             }
 
+            // Null-safety for collection properties that may be missing in older backups
+            imported.QuickTexts  ??= [];
+            imported.GroupLabels ??= [];
+            imported.BotCommands ??= [];
+            imported.TelemetryMapping ??= [];
+            imported.WatchCallsigns   ??= [];
+            imported.Groups           ??= [];
+
             // Load imported settings into form model (same mapping as OnInitialized)
             var s = imported;
             _model = new FormModel
@@ -2425,8 +2433,9 @@
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
             await SaveAsync();
-            _backupSuccess  = true;
+            _backupSuccess   = true;
             _restorePassword = string.Empty;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
