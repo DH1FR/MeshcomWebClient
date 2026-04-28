@@ -2240,6 +2240,7 @@
     {
         _backupError   = null;
         _backupSuccess = false;
+        StateHasChanged();
 
         if (string.IsNullOrWhiteSpace(_restorePassword))
         {
@@ -2248,6 +2249,7 @@
                 "Please enter the backup file password.",
                 "Inserire la password del file di backup.",
                 "Por favor, introduce la contraseña del archivo de copia de seguridad.");
+            StateHasChanged();
             return;
         }
 
@@ -2267,6 +2269,7 @@
                     "Invalid backup file (not a MeshComWebDesk format).",
                     "File di backup non valido (formato non MeshComWebDesk).",
                     "Archivo de copia de seguridad no válido (no es formato MeshComWebDesk).");
+                StateHasChanged();
                 return;
             }
 
@@ -2306,6 +2309,7 @@
                     "Decryption failed – wrong password or corrupted file.",
                     "Decrittazione fallita – password errata o file danneggiato.",
                     "Descifrado fallido – contraseña incorrecta o archivo dañado.");
+                StateHasChanged();
                 return;
             }
 
@@ -2324,6 +2328,7 @@
                     $"Import failed: JSON error – {ex.Message}",
                     $"Importazione fallita: errore JSON – {ex.Message}",
                     $"Importación fallida: error JSON – {ex.Message}");
+                StateHasChanged();
                 return;
             }
 
@@ -2334,16 +2339,22 @@
                     "Import failed: invalid format.",
                     "Importazione fallita: formato non valido.",
                     "Importación fallida: formato no válido.");
+                StateHasChanged();
                 return;
             }
 
-            // Null-safety for collection properties that may be missing in older backups
-            imported.QuickTexts  ??= [];
-            imported.GroupLabels ??= [];
-            imported.BotCommands ??= [];
+            // Null-safety: ensure nested objects and collections exist
+            imported.QuickTexts       ??= [];
+            imported.GroupLabels      ??= [];
+            imported.BotCommands      ??= [];
             imported.TelemetryMapping ??= [];
             imported.WatchCallsigns   ??= [];
             imported.Groups           ??= [];
+            imported.Database         ??= new();
+            imported.Webhook          ??= new();
+            imported.Mqtt             ??= new();
+            imported.Qrz              ??= new();
+            imported.Ai               ??= new();
 
             // Load imported settings into form model (same mapping as OnInitialized)
             var s = imported;
@@ -2396,11 +2407,11 @@
                 DbInfluxOrg             = s.Database.InfluxOrg,
                 DbInfluxBucket          = s.Database.InfluxBucket,
                 DbLogInserts            = s.Database.LogInserts,
-                WebhookEnabled    = s.Webhook.Enabled,
-                WebhookUrl        = s.Webhook.Url,
-                WebhookOnMessage  = s.Webhook.OnMessage,
-                WebhookOnPosition = s.Webhook.OnPosition,
-                WebhookOnTelemetry= s.Webhook.OnTelemetry,
+                WebhookEnabled     = s.Webhook.Enabled,
+                WebhookUrl         = s.Webhook.Url,
+                WebhookOnMessage   = s.Webhook.OnMessage,
+                WebhookOnPosition  = s.Webhook.OnPosition,
+                WebhookOnTelemetry = s.Webhook.OnTelemetry,
                 MqttEnabled             = s.Mqtt.Enabled,
                 MqttHost                = s.Mqtt.Host,
                 MqttPort                = s.Mqtt.Port,
@@ -2440,6 +2451,7 @@
         catch (Exception ex)
         {
             _backupError = $"Import: {ex.Message}";
+            StateHasChanged();
         }
     }
 
