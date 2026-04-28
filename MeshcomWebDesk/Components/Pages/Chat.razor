@@ -27,7 +27,7 @@
             <div class="tab-new-wrap">
                 @if (QsoSummaryService.IsDbReady)
                 {
-                    <button class="tab-button tab-new tab-recent-btn @(_showRecentPartners ? "active" : "")"
+                    <button class="tab-button tab-recent-btn @(_showRecentPartners ? "active" : "")"
                             @onclick="ToggleRecentPartnersAsync"
                             title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
                 }
