@@ -691,13 +691,6 @@
         </div>
     </div>
 }
-    </ChildContent>
-    <ErrorContent Context="ex">
-        <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
-            <strong>@Loc.T("Fehler:", "Error:", "Errore:", "Error:")</strong> @ex.Message
-        </div>
-    </ErrorContent>
-</ErrorBoundary>
 
 @if (_showWelcomeDialog)
 {
@@ -722,6 +715,14 @@
         </div>
     </div>
 }
+
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
+            <strong>@Loc.T("Fehler:", "Error:", "Errore:", "Error:")</strong> @ex.Message
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
 
 @code {
     private List<ChatTab> _tabs = [];
