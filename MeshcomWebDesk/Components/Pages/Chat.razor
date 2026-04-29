@@ -692,30 +692,6 @@
     </div>
 }
 
-@if (_showWelcomeDialog)
-{
-    <div id="welcome-dialog" class="welcome-overlay" @onclick="WelcomeDismissAsync">
-        <div class="welcome-modal" @onclick:stopPropagation="true">
-            <div class="welcome-icon">☕</div>
-            <h2 class="welcome-title">MeshCom WebDesk v@_appVersion</h2>
-            <p class="welcome-text">@Loc.T(
-                "Gefällt dir die neue Version? Dann spendier mir einen Kaffee! 😊",
-                "Do you like the new version? Then buy me a coffee! 😊",
-                "Ti piace la nuova versione? Offrimi un caffè! 😊",
-                "¿Te gusta la nueva versión? ¡Invítame un café! 😊")</p>
-            <p class="welcome-author">© Ralf Altenbrand (DH1FR) &nbsp;·&nbsp; <a href="mailto:dh1fr@darc.de" style="color:#a0c4ff">dh1fr@darc.de</a></p>
-            <div class="welcome-buttons">
-                <button class="welcome-btn-coffee" @onclick="WelcomeCoffeeAsync">
-                    ☕ @Loc.T("Ja, gerne!", "Yes, with pleasure!", "Sì, volentieri!", "¡Sí, con gusto!")
-                </button>
-                <button class="welcome-btn-dismiss" @onclick="WelcomeDismissAsync">
-                    😐 @Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good", "No, non è così buono", "No, no es tan bueno")
-                </button>
-            </div>
-        </div>
-    </div>
-}
-
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
@@ -865,42 +841,6 @@
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
             ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
-    private bool _showWelcomeDialog;
-
-    private async Task CheckWelcomeDialogAsync()
-    {
-        try
-        {
-            var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
-            if (welcomed == _appVersion) return;
-
-            await Task.Delay(3000);
-            await InvokeAsync(() =>
-            {
-                _showWelcomeDialog = true;
-                StateHasChanged();
-            });
-        }
-        catch { }
-    }
-
-    private async Task WelcomeCoffeeAsync()
-    {
-        _showWelcomeDialog = false;
-        try
-        {
-            await JS.InvokeVoidAsync("meshcomChat.setWelcomedVersion", _appVersion);
-            await JS.InvokeVoidAsync("open", "https://paypal.me/DH1FR", "_blank");
-        }
-        catch (JSException) { }
-    }
-
-    private async Task WelcomeDismissAsync()
-    {
-        _showWelcomeDialog = false;
-        try { await JS.InvokeVoidAsync("meshcomChat.setWelcomedVersion", _appVersion); }
-        catch (JSException) { }
-    }
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptionsMonitor<MeshcomSettings> SettingsOptions { get; set; } = default!;
@@ -1004,17 +944,16 @@
                 var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
                 if (welcomed != _appVersion)
                 {
-                    var timer = new System.Threading.Timer(_ =>
-                    {
-                        if (!_disposed)
-                            InvokeAsync(async () =>
-                            {
-                                _showWelcomeDialog = true;
-                                StateHasChanged();
-                                await Task.Yield();
-                                await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog");
-                            });
-                    }, null, 3000, System.Threading.Timeout.Infinite);
+                    await Task.Delay(3000);
+                    var txtQuestion = Loc.T(
+                        "Gefällt dir die neue Version? Dann spendier mir einen Kaffee! 😊",
+                        "Do you like the new version? Then buy me a coffee! 😊",
+                        "Ti piace la nuova versione? Offrimi un caffè! 😊",
+                        "¿Te gusta la nueva versión? ¡Invítame un café! 😊");
+                    var txtYes = Loc.T("Ja, gerne!", "Yes, with pleasure!", "Sì, volentieri!", "¡Sí, con gusto!");
+                    var txtNo = Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good", "No, non è così buono", "No, no es tan bueno");
+                    var author = "© Ralf Altenbrand (DH1FR) · dh1fr@darc.de";
+                    await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog", _appVersion, txtQuestion, txtYes, txtNo, author);
                 }
             }
             catch { }
