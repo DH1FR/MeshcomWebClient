@@ -75,10 +75,15 @@ and makes a full web client for MeshCom available via a simple URL
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
+- **🔊 Voice announcements** – incoming direct messages are read aloud using the browser's built-in **Web Speech API** (no plugin or audio file required); toggle with the 🔊/🔇 button in the status bar; state is saved in `localStorage` and restored on reload; language passed to the speech synthesiser matches the current UI language
 - **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
 - **Variable expansion in the send bar** – type any `{variable}` directly in the message input field; press **Tab** to expand as a preview; variables are always expanded automatically on send
+- **Browser spell-check** – the message input field has `spellcheck="true"`; the browser's built-in spell checker underlines misspelled words when spell-checking is enabled in the browser settings
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
+- **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required
+- **📋 Recent QSO partners** – a 📋 button next to the **+** tab button opens a flyout listing the most recently contacted callsigns (sorted by last contact time); clicking a row opens the chat tab directly; populated from the MySQL database
+- **📤 Export / 📥 Import of Quick Texts** – export the quick-text list as `MeshComWebDesk-quick-texts.json`; import to replace the list; filename editable before export; share presets with other operators
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
@@ -185,6 +190,7 @@ and makes a full web client for MeshCom available via a simple URL
   - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`)
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
+- **📤 Export / 📥 Import** – export all user-defined bot commands as `MeshComWebDesk-bot-commands.json` (browser download); import a previously exported or hand-edited file to replace the current list; filename editable before export
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
 - **Auto-split**: replies longer than 149 characters are automatically split into consecutive packets (2 s pause between parts) – same strategy as multi-bucket telemetry
 - Enabled / disabled via `BotEnabled` – applies **live without restart**
@@ -215,11 +221,11 @@ and makes a full web client for MeshCom available via a simple URL
 - Rolling daily log files with configurable retention
 - Optional UDP traffic log (`LogUdpTraffic`) for offline analysis
 
-### 🗄️ Database integration (Beta)
+### 🗄️ Database integration
 - Optional persistent storage of all monitor data to an external database
 - **MySQL / MariaDB**: writes each monitor entry as a row via parametrised `INSERT` (uses `MySqlConnector`)
 - **InfluxDB 2**: writes each monitor entry as a point via HTTP Line Protocol (`/api/v2/write`)
-- Provider selection in **Settings → 🗄️ Datenbank (Beta)**: `none` / `mysql` / `influxdb2`
+- Provider selection in **Settings → 🗄️ Datenbank**:
 - **"Test connection"** button: detects missing database, table or bucket and offers **automatic creation** with a single click
 - **Optional insert logging** – every successful write is logged at `Information` level; privacy notice shown in Settings
 - Provider and connection settings change **live without restart**
@@ -236,12 +242,87 @@ and makes a full web client for MeshCom available via a simple URL
 - **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
 - **Own position** shown as gold diamond ◆ (APRS convention)
 - **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude, **QTH locator**, **GPS coordinates** (as clickable OSM link) and a direct **🔗 aprs.fi link** (opens station info page in new tab)
-- **Callsign search** 🔍 – search field in the control bar; press Enter or click the button to jump directly to the station and open its popup; shows „Not found" if no match
+- **Callsign search** 🔍 – search field in the control bar; press Enter or click the button to jump directly to the station and open its popup; multiple matches show a dropdown; shows „Not found" if no match
 - **First open**: map automatically zooms to a **50 km radius** around own position (once own GPS is known)
 - **View persistence**: last map position and zoom level are saved in `localStorage` and restored on every subsequent visit
 - **Compact info bar** at the bottom: `📡 N Station(en) · 📍 MyCallsign` – clean one-liner regardless of station count
+- **🤖 KI-Stationsbeschreibung** (AI popup) – every station marker popup has a 🤖 button; clicking it sends the station's data (callsign, RSSI, SNR, battery, firmware, relay path, QRZ data) as context to the configured AI and shows a concise German-language station description directly inside the popup; requires AI integration to be configured and enabled
 - Updates in real-time as new position beacons arrive
 - Nav link 🗺️ added to the navigation bar
+
+### 📡 Reichweite (Coverage)
+- **Coverage overlay** on the map – toggled with the 📶 button in the map control bar
+- **Measured convex hull** (blue polygon) – shows the actual coverage area based on all directly heard stations (HopCount = 0); calculated as the **convex hull** of the GPS positions of all direct-receive stations plus own position (Haversine / gift-wrapping algorithm, implemented in JavaScript)
+- **Fill opacity 35 %**, solid border (weight 3, opacity 95 %) for good contrast against the map tiles
+- Tooltip: `📡 Gemessene Reichweite`
+- Coverage is recalculated every time the button is toggled; no background polling
+
+### 🤖 KI / AI – QSO Summary, History & Search
+
+> **Requires MySQL database** to be configured for all features in this section.
+
+#### 🔎 QSO Dialog
+A **🔎 icon** appears on every direct-chat tab as soon as the MySQL database is active.  
+Clicking it opens a modal dialog with **four tabs**:
+
+| Tab | Requires AI | Description |
+|---|---|---|
+| 📋 **KI-Zusammenfassung** | ✅ Yes | AI-generated summary of recent QSO messages |
+| 📜 **Verlauf** | ❌ No | Paginated message history with date & text filter |
+| 🔎 **Suche** | ❌ No | Full-text search across all messages in the conversation |
+| 🔎 **KI-Suche** | ✅ Yes | Ask a natural-language question; AI cites exact timestamps |
+
+- **Without AI configured**: tabs 📋 and 🔎 KI-Suche are disabled (greyed out); History and Search work with MySQL only
+- **With AI configured**: all four tabs available; the dialog opens on the Summary tab by default
+
+#### 📋 KI-Zusammenfassung (AI Summary)
+- **Automatic QSO summaries** generated by an external AI API (OpenAI, Grok or Azure OpenAI)
+- A **🔎 icon** appears on the chat tab of every direct conversation once the last contact is older than the configurable threshold (`ThresholdDays`, default 7 days) – or immediately when a summary already exists
+- **Generate / Regenerate** button – sends the last N messages (configurable `MaxMessages`, default 50) to the AI and stores the result in the `qso_summaries` table
+- **Supported AI providers:**
+
+  | Provider | `Provider` value | Default model |
+  |---|---|---|
+  | **OpenAI** (default) | `openai` | `gpt-4o-mini` |
+  | **Grok** (xAI) | `grok` | `grok-3-mini` |
+  | **Azure OpenAI** | `azure` | deployment name |
+
+- **Token usage statistics** – current session prompt / completion / total tokens and request count shown in **Settings → 🤖 KI**
+- **OpenAI balance check** – queries the OpenAI billing API and shows remaining credit / monthly usage in Settings; falls back to a dashboard link when the billing endpoint is restricted (project keys)
+- **Azure OpenAI**: configurable resource endpoint and API version
+
+#### 📜 Verlauf (History)
+- Paginated chronological message history for the current conversation (oldest first)
+- **Date range filter** (from / to) and **free-text filter** – all combinable
+- Page size: 50 messages; previous/next pagination with total count
+- Works with **MySQL only** – no AI API key required
+
+#### 🔎 Suche (Text Search)
+- Full-text search across all stored messages in the direct conversation
+- Date range filter (from / to) combinable with the search term
+- Results shown in a table with matching text highlighted
+- Works with **MySQL only** – no AI API key required
+
+#### 🔎 KI-Suche (AI Search)
+- Ask any natural-language question about the conversation (e.g. *"What did Jürgen recommend?"*)
+- The AI receives all relevant messages and responds with a precise answer **citing exact timestamps**
+- Optional date range to narrow the search window
+- Requires AI to be enabled and an API key to be configured
+
+#### ⚙️ Setting up AI features (step by step)
+
+1. **Set up MySQL** – configure `Database.Provider = "mysql"` and a valid `MySqlConnectionString` in Settings; use the **„Anlegen"** button to create the schema automatically
+2. **Choose a provider** – `openai` (default), `grok` or `azure`
+3. **Enter your API key**:
+   - OpenAI: create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) (project key is sufficient for summaries)
+   - Grok / xAI: create a key at [console.x.ai](https://console.x.ai/)
+   - Azure OpenAI: enter resource endpoint + deployment name + API version
+4. **Enable AI** – tick *„Aktiviert"* and click **💾 Save**; takes effect immediately without restart
+5. **Test** – enter a callsign in the test field and click **„DB + API testen"**; the test checks DB connectivity and makes a live API call
+6. The 🔎 icon appears on chat tabs once messages are stored in MySQL
+
+> API keys are stored **encrypted** in `appsettings.override.json` (ASP.NET Core Data Protection, `dp:` prefix).
+
 
 ### 🔗 Webhook
 - **HTTP POST** to a configurable URL on incoming events
@@ -251,7 +332,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Configured in **Settings → 🔗 Webhook**; changes apply **live without restart**
 - Compatible with **Home Assistant** webhooks, Node-RED, n8n, IFTTT, custom endpoints
 
-### 📡 MQTT *(Beta)*
+### 📡 MQTT
 - Optional connection to an external **MQTT broker** (e.g. Mosquitto, Home Assistant Mosquitto add-on, EMQX)
 - **Publisher** – forwards incoming MeshCom events to typed MQTT topics:
 
@@ -277,7 +358,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Supports **authentication** (username / password stored encrypted), **TLS** and a configurable **topic prefix**
 - **Auto-reconnect** on connection loss
 - Configurable **per-event publish flags** (messages / positions / telemetry separately)
-- Configured in **Settings → 📡 MQTT (Beta)**; password is stored encrypted (ASP.NET Core Data Protection)
+- Configured in **Settings → 📡 MQTT**; password is stored encrypted
 
 ### 🏷️ Group Labels
 - User-defined **display names for MeshCom group numbers** shown in the chat tab below the group number
@@ -285,7 +366,18 @@ and makes a full web client for MeshCom available via a simple URL
 - Pre-filled with the **official MeshCom GRC group list** from [icssw.org/meshcom-grc-gruppen](https://icssw.org/meshcom-grc-gruppen/) covering all European and international groups (EU, DACH, country codes, Italian regions, German regional groups, …)
 - Fully **editable** in **Settings → 🏷️ Group Labels** – add, remove or rename entries
 - **Restore Defaults** button resets the list to the official MeshCom group table
+- **📤 Export / 📥 Import** – export labels as `MeshComWebDesk-group-labels.json`; share with other users or import a community list; filename editable before export
 - Labels are saved in `appsettings.override.json` and apply without restart
+
+### 🔐 Backup & Restore (Settings)
+- **Full encrypted backup** of all settings including passwords and API keys – exported as `MeshComWebDesk-settings.enc` (binary, browser download)
+- **AES-256-CBC encryption** with a user-supplied password; key derived via **PBKDF2 / SHA-256 / 100,000 iterations**
+- File format: `[MCWD magic 4B][Salt 16B][IV 16B][AES ciphertext]` – portable across machines and operating systems
+- **Password is never stored** – if lost, the file cannot be recovered
+- **Import / Restore**: select the `.enc` file and enter the password; settings are decrypted, validated and saved; the page reloads automatically with a success confirmation
+- **Error handling**: wrong password, corrupted file, invalid JSON and missing fields all produce clear error messages
+- **Filename editable** before export (default: `MeshComWebDesk-settings.enc`)
+- Found in **Settings → 🔐 Datensicherung** at the bottom of the settings page
 
 ### 📱 PWA – Progressive Web App
 - **Installable** on any device via the browser's "Add to Home Screen" / "Install" prompt
@@ -351,6 +443,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 ├─ Models/
 │     MeshcomMessage.cs        ← Message model (from/to/text/GPS/RSSI/ACK/relay/telemetry)
 │     MeshcomSettings.cs       ← Strongly-typed config (IOptions)
+│     AiSettings.cs            ← AI provider + API key + model + summary parameters
 │     TelemetryMappingEntry.cs ← Telemetry mapping entry (JSON key → label + unit + decimals)
 │     QuickTextEntry.cs        ← Quick-text button entry (label + text, supports {variables})
 │     DatabaseSettings.cs      ← DB provider + connection settings + LogInserts
@@ -384,6 +477,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
+      QsoSummaryService.cs      ← AI-based QSO summary: reads messages from MySQL, calls AI API, stores result in qso_summaries table; token usage tracking; balance check
       Bot/
         IBotCommand.cs         ← Interface for all bot commands (Name, Description, ExecuteAsync)
         BotCommandService.cs   ← Dispatcher: parses --name [args], builds --help, hot-reloads user commands from config; normalises bare "ping" keyword
@@ -444,7 +538,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
   "Language":              "de",         // UI language: "de" (German) or "en" (English)
-  "Database": {                          // optional database sink (Beta)
+  "Database": {                          // optional database sink
     "Provider":              "none",     // "none" | "mysql" | "influxdb2"
     "MySqlConnectionString": "",         // e.g. "Server=localhost;Database=meshcom;User=mc;Password=secret;"
     "MySqlTableName":        "meshcom_monitor", // created automatically via Settings → Anlegen
@@ -461,7 +555,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "OnPosition":  false,              // fire on incoming position beacons
     "OnTelemetry": false               // fire on incoming telemetry
   },
-  "Mqtt": {                            // optional MQTT broker integration (Beta)
+  "Mqtt": {                            // optional MQTT broker integration
     "Enabled":          false,         // enable MQTT connection
     "Host":             "localhost",   // MQTT broker hostname or IP
     "Port":             1883,          // MQTT broker port (default 1883, TLS usually 8883)
@@ -479,6 +573,18 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "Enabled":  false,                 // enable QRZ.com XML API callsign lookups
     "Username": "",                    // QRZ.com login username (usually your callsign)
     "Password": ""                     // QRZ.com login password (stored encrypted after first UI save)
+  },
+  "Ai": {
+    "Enabled":        false,           // enable AI-based QSO summary feature
+    "Provider":       "openai",        // "openai" | "grok" | "azure"
+    "ApiKey":         "",              // API key (stored encrypted after first UI save)
+    "Model":          "gpt-4o-mini",   // OpenAI: "gpt-4o-mini"/"gpt-4o"; Grok: "grok-3-mini"/"grok-3"; Azure: deployment name
+    "AzureEndpoint":  "",              // Azure OpenAI resource endpoint (only for Provider="azure")
+    "AzureApiVersion":"2024-08-01-preview", // Azure OpenAI API version (only for Provider="azure")
+    "ThresholdDays":  7,               // days since last QSO before the 🤖 icon appears (0 = always)
+    "SummaryDays":    365,             // how many days back to look for messages
+    "MaxMessages":    50,              // max messages sent to AI per request (limits token usage)
+    "LogRequests":    false            // log every AI API request at Information level
   },
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
@@ -1071,6 +1177,27 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.9.1
+- **feat:** Bug fixes and optimizations.
+
+### v1.9.0
+- **feat:** 🔎 **QSO dialog – History & Search without AI** – the 🔎 icon on direct-chat tabs is now always shown when MySQL is active (not only when an AI summary exists); the modal opens a four-tab dialog: *KI-Zusammenfassung*, *Verlauf*, *Suche*, *KI-Suche*; History and Text Search work with MySQL only (no AI API key required); AI tabs are disabled and greyed out when AI is not configured
+- **feat:** 🤖 **KI-Zusammenfassung / KI-Suche locked when AI inactive** – Summary and AI Search tabs are `disabled` with tooltip hint when `Ai.Enabled = false` or no API key is set; guard added in `SwitchModalTab` and template to prevent bypassing; reopens on the History tab when AI is off
+- **feat:** 📋 **Recent QSO partners** – 📋 button next to the + tab button opens a flyout with the most recently contacted callsigns; populated from MySQL; clicking a row opens the chat tab directly
+- **feat:** ✍️ **Browser spell-check** – message input field has `spellcheck="true"`; browser underlines misspelled words when spell-check is enabled in browser settings
+- **feat:** 📤 **Import / Export – Bot Commands, Group Labels, Quick Texts** – each section in Settings has 📤 Export (browser download as `.json`) and 📥 Import (replaces existing entries, with full error handling); filenames are editable before export; files can be shared between users
+- **feat:** 🔐 **Backup & Restore** – full encrypted backup of all settings (including passwords and API keys) as `MeshComWebDesk-settings.enc`; AES-256-CBC + PBKDF2/SHA-256/100k iterations; wrong password and corrupted files produce clear error messages; page reloads automatically after successful restore; filename editable before export
+- **fix:** ⚙️ **Settings – „Einstellungen gespeichert" moved** – success message now appears directly above the Save button instead of at the top of the page; full width display corrected
+- **fix:** 🤖 **IsAiActive reads live settings** – `IOptions<MeshcomSettings>` replaced with `IOptionsMonitor` in Chat.razor; `IsAiActive` always reads `CurrentValue` so re-enabling AI in Settings is reflected immediately without page reload
+- **fix:** 💾 **QsoSummaryService – History/Search without AI** – `GetHistoryAsync` and `TextSearchAsync` now use a new `IsDbOnlyAvailable()` check (MySQL configured, no `ai.Enabled` requirement) so Verlauf and Suche work even when KI is disabled
+- **fix:** 🔐 **Backup – PBKDF2 on thread-pool** – CPU-intensive key derivation moved to `Task.Run()` to prevent blocking the SignalR heartbeat and disconnecting the browser
+- **fix:** 🔐 **Backup Import – Blazor InputFile** – replaced JS-interop `int[]` file read (which exceeded the SignalR 32 KB message limit) with Blazor's `InputFile` component; connection no longer drops on file selection
+- **docs:** 📖 **README** – QSO dialog section fully rewritten; Import/Export and Backup & Restore documented; History, Text Search, AI Search and AI Summary documented as separate tabs; step-by-step AI setup guide added
+
+### v1.8.2
+- **feat:** 📡 **Reichweite (Coverage)** – Kontrast der gemessenen Reichweiten-Fläche erhöht (`fillOpacity` 0.12 → 0.35, Randlinie weight 2 → 3, opacity 0.65 → 0.95); Topo-Prognose (ungenau) vollständig entfernt
+- **docs:** 📖 **README** – Abschnitte für 🤖 KI / QSO-Zusammenfassung, 📡 Reichweiteberechnung (Convex Hull), 🗺️ KI-Stationsbeschreibung im Karten-Popup und Callsign-Suche ergänzt; `Ai`-Konfigurationsblock und Architektur aktualisiert
+
 ### v1.8.1
 - **feat:** 🟢 **MQTT/DB Verbindungsstatus in der Statusleiste** – MQTT- und Datenbankverbindung werden als farbige Status-Badges in der Statusleiste angezeigt; MQTT-Verbindung kann direkt in den Einstellungen über einen „Verbindung testen"-Button überprüft werden
 - **feat:** 🔔 **Statusleiste – einheitliche Badge-Darstellung** – alle Statusleisten-Elemente (UDP, Ton, MQTT, DB) werden einheitlich als farbige Badges dargestellt; Glocke-/Ton-aus-Button ebenfalls als Badge; UDP-Badge zeigt nur Icon+Label, vollständiger Text als Tooltip
@@ -1088,7 +1215,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **fix:** 🔧 **MQTT ClientId** – zufälliger Suffix verhindert Instanz-Konflikte beim Broker; Stack-Trace bei Connect-Fehler unterdrückt
 
 ### v1.7.7
-- **feat:** 📡 **MQTT integration (Beta)** – optional connection to an external MQTT broker; publishes incoming chat messages, position beacons and telemetry to typed topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optional subscriber forwards `{prefix}/send/#` topics as outgoing UDP messages; supports authentication, TLS and auto-reconnect; all `{variable}` placeholders expanded in subscriber payloads
+- **feat:** 📡 **MQTT integration** – optional connection to an external MQTT broker;
 - **feat:** 🏷️ **Group Labels** – configurable short and full names for MeshCom group numbers; shown in chat tab (short label below group number, full name as tooltip); pre-filled with official MeshCom GRC group list (icssw.org); editable in Settings with restore-defaults button
 - **feat:** 🚀 **Automatic update check** – on startup the app queries the GitHub Releases API and shows a dismissible banner when a newer version is available
 - **fix:** 🌐 **Browser tab title** corrected to "MeshCom WebDesk"
@@ -1241,8 +1368,8 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **docs:** Architecture, Configuration and Changelog updated
 
 ### v1.5.0
-- **feat:** 🗄️ **Database integration (Beta)** – optional MySQL/MariaDB or InfluxDB 2 sink writes every monitor entry to an external database
-- **feat:** **Settings → Datenbank (Beta)** – provider dropdown, connection fields, "Test connection" button with automatic DB/table/bucket creation
+- **feat:** 🗄️ **Database integration** – optional MySQL/MariaDB or InfluxDB 2 sink writes every monitor entry to an external database
+- **feat:** **Settings → Datenbank** – provider dropdown, connection fields, "Test connection" button with automatic DB/table/bucket creation
 - **feat:** **Optional insert logging** (`LogInserts`) – logs the full SQL `INSERT` at Information level; privacy notice shown in Settings UI
 - **feat:** **Message length guard** – character counter `X/149` in the chat input, `maxlength="149"` enforced in the browser and server-side warning log when limit is exceeded
 - **docs:** 🔒 **Privacy / Datenschutz** section added to README – covers log files, database storage, DB insert log and persistence; includes recommendations for GDPR-compliant operation

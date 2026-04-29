@@ -132,6 +132,19 @@ public class SettingsService
                     ["LogRequests"]     = s.Qrz.LogRequests,
                     ["CacheMaxAgeDays"] = s.Qrz.CacheMaxAgeDays
                 },
+                ["Ai"] = new JsonObject
+                {
+                    ["Enabled"]          = s.Ai.Enabled,
+                    ["Provider"]         = s.Ai.Provider,
+                    ["ApiKey"]           = Encrypt(s.Ai.ApiKey),
+                    ["Model"]            = s.Ai.Model,
+                    ["AzureEndpoint"]    = s.Ai.AzureEndpoint,
+                    ["AzureApiVersion"]  = s.Ai.AzureApiVersion,
+                    ["ThresholdDays"]    = s.Ai.ThresholdDays,
+                    ["SummaryDays"]      = s.Ai.SummaryDays,
+                    ["MaxMessages"]      = s.Ai.MaxMessages,
+                    ["LogRequests"]      = s.Ai.LogRequests
+                },
                 ["QuickTexts"] = new JsonArray(s.QuickTexts.Select(q => (JsonNode?)new JsonObject
                 {
                     ["Label"] = q.Label,

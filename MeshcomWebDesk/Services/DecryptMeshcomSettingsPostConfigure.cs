@@ -26,6 +26,7 @@ public sealed class DecryptMeshcomSettingsPostConfigure : IPostConfigureOptions<
         options.Qrz.Password                   = TryDecrypt(options.Qrz.Password);
         options.TelemetryApiKey                = TryDecrypt(options.TelemetryApiKey);
         options.Mqtt.Password                  = TryDecrypt(options.Mqtt.Password);
+        options.Ai.ApiKey                      = TryDecrypt(options.Ai.ApiKey);
     }
 
     private string TryDecrypt(string value)

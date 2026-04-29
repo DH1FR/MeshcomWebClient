@@ -16,4 +16,18 @@ public class ChatTab
     /// <summary>Number of messages received while this tab was not active. Not persisted.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public int UnreadCount { get; set; }
+
+    /// <summary>
+    /// When true, a QSO summary is available for the remote callsign (direct tabs only). Not persisted.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool HasQsoSummary { get; set; }
+
+    /// <summary>Base callsign (without SSID) used for the QSO summary lookup. Not persisted.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? QsoSummaryCallsignBase { get; set; }
+
+    /// <summary>True while the async QSO summary check is running. Prevents duplicate DB queries.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool QsoSummaryCheckPending { get; set; }
 }

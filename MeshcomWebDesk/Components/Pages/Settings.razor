@@ -10,6 +10,8 @@
 @inject QrzService QrzService
 @inject IJSRuntime JS
 @inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
+@inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
+@inject NavigationManager Nav
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -33,10 +35,6 @@
             @Loc.T("(Serilog) erfordern einen Neustart der Anwendung.", "(Serilog) require an application restart.", "(Serilog) richiedono il riavvio dell'app.", "(Serilog) requieren reiniciar la aplicación.")
         </div>
 
-        @if (_saved)
-        {
-            <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.", "Impostazioni salvate.", "Ajustes guardados.")</div>
-        }
         @if (_errorMessage != null)
         {
             <div class="settings-error">❌ @Loc.T("Fehler:", "Error:", "Errore:", "Error:") @_errorMessage</div>
@@ -263,7 +261,7 @@
                                         }
                                     </tbody>
                                 </table>
-                                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                                     <button type="button" class="btn-add"
                                             @onclick="() => _model.BotCommands.Add(new BotCommandEntry())">
                                         + @Loc.T("Befehl hinzufügen", "Add Command", "Aggiungi comando", "Añadir comando")
@@ -274,7 +272,20 @@
                                             ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
                                             : Loc.T("Variablen anzeigen", "Show Variables", "Mostra variabili", "Mostrar variables"))
                                     </button>
+                                    <input type="text" @bind="_filenameBotCommands" style="width:220px;font-size:12px;padding:2px 6px" />
+                                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportBotCommandsAsync">
+                                        📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                                    </button>
+                                    <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
+                                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
+                                        📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                                        <InputFile accept=".json" style="display:none" OnChange="ImportBotCommandsAsync" />
+                                    </label>
                                 </div>
+                                @if (_importError != null)
+                                {
+                                    <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
+                                }
                                 @if (_showBotVars)
                                 {
                                     var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
@@ -599,9 +610,9 @@
             </div>
         </div>
 
-        <!-- Datenbank / Database (Beta) -->
+        <!-- Datenbank / Database -->
         <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank (Beta)", "Database (Beta)", "Database (Beta)", "Base de datos (Beta)") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database", "Database", "Base de datos") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Monitor-Einträge (Rufzeichen, Nachrichtentexte, GPS, RSSI) werden in die externe Datenbank geschrieben. Nur im eigenen, abgesicherten Netz betreiben. Datenschutz beachten.",
@@ -770,7 +781,7 @@
 
         <!-- MQTT -->
         <div class="settings-section @(IsOpen("mqtt") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span style="font-size:11px;color:#8b949e;font-weight:normal">(Beta)</span> <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("MQTT aktiv", "MQTT Active", "MQTT attivo", "MQTT activo")</label>
                 <label class="settings-toggle">
@@ -978,7 +989,7 @@
                         }
                     </tbody>
                 </table>
-            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                 <button type="button" class="btn-add"
                         @onclick="() => _model.QuickTexts.Add(new QuickTextEntry())">
                     + @Loc.T("Schnelltext hinzufügen", "Add Quick Text", "Aggiungi testo rapido", "Añadir texto rápido")
@@ -989,7 +1000,20 @@
                         ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
                         : Loc.T("Verfügbare Variablen", "Available Variables", "Variabili disponibili", "Variables disponibles"))
                 </button>
+                <input type="text" @bind="_filenameQuickTexts" style="width:220px;font-size:12px;padding:2px 6px" />
+                <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportQuickTextsAsync">
+                    📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                </button>
+                <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
+                       title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
+                    📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                    <InputFile accept=".json" style="display:none" OnChange="ImportQuickTextsAsync" />
+                </label>
             </div>
+            @if (_importError != null)
+            {
+                <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
+            }
             @if (_showQuickTextVars)
             {
                 var now = DateTime.Now;
@@ -1059,7 +1083,7 @@
                         }
                     </tbody>
                 </table>
-                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                     <button type="button" class="btn-add"
                             @onclick="() => _model.GroupLabels.Add(new GroupLabelEntry())">
                         + @Loc.T("Gruppe hinzufügen", "Add Group", "Aggiungi gruppo", "Añadir grupo")
@@ -1068,11 +1092,274 @@
                             @onclick="() => _model.GroupLabels = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()">
                         🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults", "Ripristina predefiniti", "Restaurar predeterminados")
                     </button>
+                    <input type="text" @bind="_filenameGroupLabels" style="width:220px;font-size:12px;padding:2px 6px" />
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportGroupLabelsAsync">
+                        📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                    </button>
+                    <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
+                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
+                        📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                        <InputFile accept=".json" style="display:none" OnChange="ImportGroupLabelsAsync" />
+                    </label>
                 </div>
+                @if (_importError != null)
+                {
+                    <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
+                }
             </div>
         </div>
 
+        <!-- KI / QSO-Zusammenfassung -->
+        <div class="settings-section @(IsOpen("ai") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("ai")'>
+                🤖 @Loc.T("KI / QSO-Zusammenfassung", "AI / QSO Summary", "IA / Riepilogo QSO", "IA / Resumen QSO")
+                <span class="section-chevron">@(IsOpen("ai") ? "▲" : "▼")</span>
+            </h2>
+            <div class="settings-grid">
+                <label>@Loc.T("Aktiviert", "Enabled", "Attivo", "Activo")</label>
+                <label class="toggle-label">
+                    <input type="checkbox" @bind="_model.AiEnabled" />
+                    <span>@(_model.AiEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>@Loc.T("Anbieter", "Provider", "Provider", "Proveedor")</label>
+                <select @bind="_model.AiProvider">
+                    <option value="openai">OpenAI (api.openai.com)</option>
+                    <option value="grok">Grok / xAI (api.x.ai)</option>
+                    <option value="azure">Azure OpenAI (Microsoft)</option>
+                </select>
+
+                <label>API Key</label>
+                <input type="password" @bind="_model.AiApiKey" autocomplete="new-password"
+                       placeholder="@(_model.AiProvider == "grok" ? "xai-..." : _model.AiProvider == "azure" ? "Azure API Key..." : "sk-...")" />
+
+                @if (_model.AiProvider == "azure")
+                {
+                    <label>@Loc.T("Azure Endpoint", "Azure Endpoint", "Azure Endpoint", "Azure Endpoint")</label>
+                    <input type="text" @bind="_model.AiAzureEndpoint"
+                           placeholder="https://mein-name.openai.azure.com" />
+
+                    <label>@Loc.T("API Version", "API Version", "Versione API", "Versión API")</label>
+                    <input type="text" @bind="_model.AiAzureApiVersion"
+                           placeholder="2024-08-01-preview" />
+                }
+
+                <label>@Loc.T("Modell / Deployment", "Model / Deployment", "Modello / Deployment", "Modelo / Deployment")</label>
+                @if (_model.AiProvider == "grok")
+                {
+                    <select @bind="_model.AiModel">
+                        <option value="grok-3-mini">grok-3-mini (@Loc.T("empfohlen", "recommended", "consigliato", "recomendado"))</option>
+                        <option value="grok-3">grok-3</option>
+                    </select>
+                }
+                else if (_model.AiProvider == "azure")
+                {
+                    <input type="text" @bind="_model.AiModel"
+                           placeholder="@Loc.T("Deployment-Name aus Azure Portal", "Deployment name from Azure Portal", "Nome deployment da Azure Portal", "Nombre de deployment de Azure Portal")" />
+                }
+                else
+                {
+                    <select @bind="_model.AiModel">
+                        <option value="gpt-4o-mini">gpt-4o-mini (@Loc.T("empfohlen", "recommended", "consigliato", "recomendado"))</option>
+                        <option value="gpt-4o">gpt-4o</option>
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                    </select>
+                }
+
+                <label>@Loc.T("Icon-Schwellwert (Tage)", "Icon threshold (days)", "Soglia icona (giorni)", "Umbral icono (días)")</label>
+                <div>
+                    <input type="number" min="0" max="365" @bind="_model.AiThresholdDays" />
+                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Icon erscheint wenn letztes QSO ≥ X Tage zurück liegt. 0 = immer anzeigen.", "Icon appears when last QSO is ≥ X days ago. 0 = always show.", "Icona se ultimo QSO ≥ X giorni fa. 0 = sempre.", "Icono si último QSO ≥ X días. 0 = siempre.")</div>
+                </div>
+
+                <label>@Loc.T("Auswertungszeitraum (Tage)", "Summary period (days)", "Periodo riepilogo (giorni)", "Período resumen (días)")</label>
+                <div>
+                    <input type="number" min="0" max="3650" @bind="_model.AiSummaryDays" />
+                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Nachrichten der letzten X Tage werden ausgewertet. 0 = alle verfügbaren.", "Messages from the last X days are evaluated. 0 = all available.", "Messaggi degli ultimi X giorni. 0 = tutti.", "Mensajes de los últimos X días. 0 = todos.")</div>
+                </div>
+
+                <label>@Loc.T("Max. Nachrichten", "Max. messages", "Max. messaggi", "Máx. mensajes")</label>
+                <input type="number" min="10" max="500" @bind="_model.AiMaxMessages" />
+
+                <label>@Loc.T("API-Anfragen loggen", "Log API requests", "Registra richieste API", "Registrar solicitudes API")</label>
+                <label class="toggle-label">
+                    <input type="checkbox" @bind="_model.AiLogRequests" />
+                    <span>@(_model.AiLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+            </div>
+            @if (_model.AiEnabled && IsOpen("ai"))
+            {
+                <div class="settings-notice" style="background:#2a1a0a;border-color:#8a5a1a;margin-top:0.75rem">
+                    ⚠️ @Loc.T(
+                        "Datenschutzhinweis: Beim Generieren einer Zusammenfassung werden Nachrichtentexte an einen externen KI-Dienst gesendet. Bitte stelle sicher, dass alle Gesprächspartner damit einverstanden sind.",
+                        "Privacy notice: When generating a summary, message texts are sent to an external AI service. Please ensure all conversation partners consent to this.",
+                        "Avviso privacy: durante la generazione di un riepilogo, i testi vengono inviati a un servizio AI esterno.",
+                        "Aviso de privacidad: al generar un resumen, los textos se envían a un servicio de IA externo.")
+                </div>
+
+                <!-- Token-Statistik -->
+                <div style="margin-top:0.75rem">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.4rem">
+                        <strong style="font-size:0.92rem">📊 @Loc.T("Token-Verbrauch (seit letztem Start)", "Token usage (since last start)", "Utilizzo token (dall'ultimo avvio)", "Uso de tokens (desde último inicio)")</strong>
+                        <button type="button" class="btn-add" style="padding:2px 8px;font-size:11px" @onclick="RefreshAiUsageStats">🔄</button>
+                    </div>
+                    @{
+                        var usage = _aiUsageStats ?? QsoSummaryService.GetUsageStats();
+                    }
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:0.87rem;color:#c9d1d9;max-width:340px">
+                        <span style="color:#8b949e">@Loc.T("Anfragen:", "Requests:", "Richieste:", "Solicitudes:")</span>
+                        <span>@usage.RequestCount</span>
+                        <span style="color:#8b949e">@Loc.T("Prompt-Token:", "Prompt tokens:", "Token prompt:", "Tokens de prompt:")</span>
+                        <span>@usage.PromptTokens.ToString("N0")</span>
+                        <span style="color:#8b949e">@Loc.T("Completion-Token:", "Completion tokens:", "Token completion:", "Tokens de completion:")</span>
+                        <span>@usage.CompletionTokens.ToString("N0")</span>
+                        <span style="color:#8b949e">@Loc.T("Gesamt-Token:", "Total tokens:", "Token totali:", "Tokens totales:")</span>
+                        <span><strong>@usage.TotalTokens.ToString("N0")</strong></span>
+                        @if (usage.LastRequestAt.HasValue)
+                        {
+                            <span style="color:#8b949e">@Loc.T("Letzte Anfrage:", "Last request:", "Ultima richiesta:", "Última solicitud:")</span>
+                            <span>@usage.LastRequestAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Guthaben-Abfrage (nur OpenAI) -->
+                @if (_model.AiProvider == "openai")
+                {
+                    <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.4rem">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <button type="button" class="btn-send-now" @onclick="CheckAiBalanceAsync" disabled="@_aiBalanceChecking">
+                                @if (_aiBalanceChecking)
+                                {
+                                    <span>⏳ @Loc.T("Prüfe…", "Checking…", "Verifica…", "Comprobando…")</span>
+                                }
+                                else
+                                {
+                                    <span>💰 @Loc.T("Guthaben prüfen", "Check balance", "Verifica credito", "Consultar saldo")</span>
+                                }
+                            </button>
+                            <small style="color:#8b949e">@Loc.T(
+                                "Verbrauch: Projekt-Key reicht. Limit/Restguthaben: User-Key (sk-…) erforderlich.",
+                                "Usage: Project Key sufficient. Limit/balance: User Key (sk-…) required.",
+                                "Utilizzo: Project Key sufficiente. Limite/saldo: User Key (sk-…) necessario.",
+                                "Uso: Project Key suficiente. Límite/saldo: User Key (sk-…) necesario.")</small>
+                        </div>
+                        @if (_aiBalanceResult != null)
+                        {
+                            <div class="@(_aiBalanceResult.StartsWith("✅") ? "settings-success" : _aiBalanceResult.StartsWith("❌") ? "settings-error" : "settings-notice")" style="margin-top:0">
+                                @if (_aiBalanceResult.Contains("https://"))
+                                {
+                                    var dashUrl = "https://platform.openai.com/settings/organization/billing/overview";
+                                    var txt = _aiBalanceResult[.._aiBalanceResult.IndexOf("https://")].TrimEnd();
+                                    <span>@txt </span>
+                                    <a href="@dashUrl" target="_blank" rel="noopener" style="color:#58a6ff">OpenAI Billing Dashboard →</a>
+                                }
+                                else
+                                {
+                                    @_aiBalanceResult
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input type="text" @bind="_aiTestCallsign" placeholder="@Loc.T("Rufzeichen z.B. DL6WAB-1", "Callsign e.g. DL6WAB-1", "Nominativo es. DL6WAB-1", "Indicativo p.ej. DL6WAB-1")"
+                               style="width:180px" />
+                        <button type="button" class="btn-send-now" @onclick="TestAiAsync" disabled="@_aiTesting">
+                            @if (_aiTesting)
+                            {
+                                <span>⏳ @Loc.T("Teste...", "Testing...", "Test...", "Probando...")</span>
+                            }
+                            else
+                            {
+                                <span>🔬 @Loc.T("DB + API testen", "Test DB + API", "Testa DB + API", "Probar DB + API")</span>
+                            }
+                        </button>
+                    </div>
+                    @if (_aiTestResult != null)
+                    {
+                        <div class="@(_aiTestResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.25rem;white-space:pre-wrap">
+                            @_aiTestResult
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Datensicherung / Backup & Restore -->
+        <div class="settings-section @(IsOpen("backup") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("backup")'>
+                🔐 @Loc.T("Datensicherung", "Backup & Restore", "Backup e ripristino", "Copia de seguridad")
+                <span class="section-chevron">@(IsOpen("backup") ? "▲" : "▼")</span>
+            </h2>
+            <div class="settings-notice" style="margin-bottom:0.75rem">
+                🔒 @Loc.T(
+                    "Alle Einstellungen inkl. Passwörter und API-Keys werden AES-256 verschlüsselt gespeichert. Das Passwort wird nirgendwo gespeichert – bei Verlust ist die Datei nicht wiederherstellbar.",
+                    "All settings including passwords and API keys are saved AES-256 encrypted. The password is not stored anywhere – if lost, the file cannot be recovered.",
+                    "Tutte le impostazioni incluse password e chiavi API vengono salvate con crittografia AES-256. La password non viene memorizzata – se persa, il file non è recuperabile.",
+                    "Todos los ajustes incluyendo contraseñas y claves API se guardan cifrados con AES-256. La contraseña no se almacena en ningún lugar – si se pierde, el archivo no se puede recuperar.")
+            </div>
+
+            @* Export *@
+            <div style="margin-bottom:1rem">
+                <h3 style="font-size:0.9rem;margin:0 0 0.5rem;color:#a0c4ff">
+                    📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                </h3>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="password" @bind="_backupPassword" autocomplete="new-password"
+                           placeholder="@Loc.T("Passwort für Verschlüsselung", "Encryption password", "Password di cifratura", "Contraseña de cifrado")"
+                           style="flex:1;min-width:180px" />
+                    <input type="text" @bind="_filenameBackup" style="width:220px;font-size:12px;padding:2px 6px" />
+                    <button class="btn-action" @onclick="ExportSettingsAsync"
+                            disabled="@string.IsNullOrWhiteSpace(_backupPassword)">
+                        📤 @Loc.T("Backup erstellen", "Create Backup", "Crea backup", "Crear copia de seguridad")
+                    </button>
+                </div>
+            </div>
+
+            @* Import *@
+            <div>
+                <h3 style="font-size:0.9rem;margin:0 0 0.5rem;color:#a0c4ff">
+                    📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                </h3>
+                <div class="settings-notice" style="margin-bottom:0.5rem;background:#2b0d0d;border-color:#6e2020;color:#f0a0a0">
+                    ⚠️ @Loc.T(
+                        "Alle aktuellen Einstellungen werden durch die Backup-Datei ersetzt.",
+                        "All current settings will be replaced by the backup file.",
+                        "Tutte le impostazioni correnti verranno sostituite dal file di backup.",
+                        "Todos los ajustes actuales serán reemplazados por el archivo de copia de seguridad.")
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="password" @bind="_restorePassword" autocomplete="new-password"
+                           placeholder="@Loc.T("Passwort der Backup-Datei", "Backup file password", "Password del file di backup", "Contraseña del archivo de copia")"
+                           style="flex:1;min-width:180px" />
+                    <label class="btn-action" style="cursor:pointer"
+                           title="@Loc.T("MeshComWebDesk-settings.enc öffnen", "Open MeshComWebDesk-settings.enc", "Apri MeshComWebDesk-settings.enc", "Abrir MeshComWebDesk-settings.enc")">
+                        📥 @Loc.T("Backup wiederherstellen", "Restore Backup", "Ripristina backup", "Restaurar copia de seguridad")
+                        <InputFile accept=".enc" style="display:none" OnChange="ImportSettingsAsync" />
+                    </label>
+                </div>
+            </div>
+
+            @if (_backupError != null)
+            {
+                <div class="settings-error" style="margin-top:0.5rem">❌ @_backupError</div>
+            }
+            @if (_backupSuccess || _restored)
+            {
+                <div class="settings-success" style="margin-top:0.5rem">
+                    ✅ @Loc.T("Erfolgreich.", "Success.", "Operazione riuscita.", "Correcto.")
+                </div>
+            }
+        </div>
+
         <div class="settings-actions">
+            @if (_saved)
+            {
+                <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.", "Impostazioni salvate.", "Ajustes guardados.")</div>
+            }
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
         </div>
 
@@ -1082,6 +1369,7 @@
 @code {
     private FormModel _model = new();
     private bool _saved;
+    private bool _restored;
     private string? _errorMessage;
     private bool   _sendingNow;
     private string? _sendResult;
@@ -1108,6 +1396,13 @@
 
     private bool    _qrzTesting;
     private string? _qrzTestResult;
+
+    private bool    _aiTesting;
+    private string? _aiTestResult;
+    private string  _aiTestCallsign = string.Empty;
+    private bool    _aiBalanceChecking;
+    private string? _aiBalanceResult;
+    private AiUsageStats? _aiUsageStats;
 
     private HashSet<string> _openSections = [];
     private bool IsOpen(string id) => _openSections.Contains(id);
@@ -1369,6 +1664,125 @@
         _qrzTestResult = Loc.T("✅ Cache geleert.", "✅ Cache cleared.", "✅ Cache svuotata.", "✅ Caché vaciado.");
     }
 
+    private async Task TestAiAsync()
+    {
+        _aiTesting    = true;
+        _aiTestResult = null;
+        StateHasChanged();
+
+        try
+        {
+            // Save current settings first so QsoSummaryService picks them up
+            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+
+            var cs = _aiTestCallsign.Trim();
+            if (string.IsNullOrEmpty(cs))
+            {
+                _aiTestResult = Loc.T("❌ Bitte ein Rufzeichen eingeben.", "❌ Please enter a callsign.", "❌ Inserire un nominativo.", "❌ Introduce un indicativo.");
+                return;
+            }
+
+            // Strip SSID for the base callsign
+            var csBase = cs.Contains('-') ? cs[..cs.IndexOf('-')] : cs;
+
+            // Step 1: DB check
+            var hasData = await QsoSummaryService.HasSummaryAsync(csBase);
+            var lastQso = await QsoSummaryService.GetLastQsoTimeAsync(csBase);
+
+            var dbLine = lastQso.HasValue
+                ? Loc.T($"✅ DB: Letztes QSO mit {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
+                         $"✅ DB: Last QSO with {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
+                         $"✅ DB: Ultimo QSO con {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
+                         $"✅ DB: Último QSO con {csBase}: {lastQso:dd.MM.yyyy HH:mm}")
+                : Loc.T($"⚠️ DB: Keine Nachrichten für {csBase} gefunden.",
+                         $"⚠️ DB: No messages found for {csBase}.",
+                         $"⚠️ DB: Nessun messaggio trovato per {csBase}.",
+                         $"⚠️ DB: No se encontraron mensajes para {csBase}.");
+
+            var iconLine = hasData
+                ? Loc.T("✅ Icon: würde angezeigt werden.", "✅ Icon: would be shown.", "✅ Icona: verrebbe mostrata.", "✅ Ícono: se mostraría.")
+                : Loc.T("ℹ️ Icon: wird nicht angezeigt (Schwellwert nicht erreicht oder keine Daten).",
+                         "ℹ️ Icon: not shown (threshold not reached or no data).",
+                         "ℹ️ Icona: non mostrata (soglia non raggiunta o nessun dato).",
+                         "ℹ️ Ícono: no se muestra (umbral no alcanzado o sin datos).");
+
+            // Step 2: quick API ping (generate with max 1 message to test connectivity)
+            var apiLine = string.Empty;
+            var s = SettingsMonitor.CurrentValue.Ai;
+            if (!string.IsNullOrWhiteSpace(s.ApiKey))
+            {
+                try
+                {
+                    var summary = await QsoSummaryService.GenerateSummaryAsync(csBase, _model.MyCallsign);
+                    apiLine = summary != null
+                        ? Loc.T("✅ API: Verbindung erfolgreich, Zusammenfassung generiert.",
+                                 "✅ API: Connection successful, summary generated.",
+                                 "✅ API: Connessione riuscita, riepilogo generato.",
+                                 "✅ API: Conexión exitosa, resumen generado.")
+                        : Loc.T("❌ API: Anfrage fehlgeschlagen. Bitte Log prüfen.",
+                                 "❌ API: Request failed. Please check log.",
+                                 "❌ API: Richiesta fallita. Controlla il log.",
+                                 "❌ API: Solicitud fallida. Revisa el log.");
+                }
+                catch (Exception ex)
+                {
+                    apiLine = $"❌ API: {ex.Message}";
+                }
+            }
+            else
+            {
+                apiLine = Loc.T("ℹ️ API: Kein API-Key konfiguriert – nur DB-Test möglich.",
+                                 "ℹ️ API: No API key configured – DB test only.",
+                                 "ℹ️ API: Nessuna chiave API – solo test DB.",
+                                 "ℹ️ API: Sin clave API – solo prueba DB.");
+            }
+
+            _aiTestResult = string.Join("\n", new[] { dbLine, iconLine, apiLine }.Where(l => !string.IsNullOrEmpty(l)));
+        }
+        catch (Exception ex)
+        {
+            _aiTestResult = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _aiTesting = false;
+        }
+    }
+
+    private void RefreshAiUsageStats()
+    {
+        _aiUsageStats = QsoSummaryService.GetUsageStats();
+    }
+
+    private async Task CheckAiBalanceAsync()
+    {
+        _aiBalanceChecking = true;
+        _aiBalanceResult   = null;
+        try
+        {
+            var result = await QsoSummaryService.CheckBalanceAsync();
+            _aiBalanceResult = result switch
+            {
+                null                                    => Loc.T(
+                    "ℹ️ Nur für OpenAI verfügbar. Bitte Provider und API-Key prüfen.",
+                    "ℹ️ Only available for OpenAI. Please check provider and API key.",
+                    "ℹ️ Disponibile solo per OpenAI. Controlla provider e chiave API.",
+                    "ℹ️ Solo disponible para OpenAI. Comprueba proveedor y clave API."),
+                "⚠️ BILLING_API_RESTRICTED"             => Loc.T(
+                    "⚠️ OpenAI hat die Billing-API für diesen Key gesperrt. Guthaben direkt einsehen: https://platform.openai.com/settings/organization/billing/overview",
+                    "⚠️ OpenAI has restricted the Billing API for this key. Check balance directly: https://platform.openai.com/settings/organization/billing/overview",
+                    "⚠️ OpenAI ha limitato la Billing API per questa chiave. Verifica il saldo su: https://platform.openai.com/settings/organization/billing/overview",
+                    "⚠️ OpenAI ha restringido la Billing API para esta clave. Consulta el saldo en: https://platform.openai.com/settings/organization/billing/overview"),
+                string r when r.StartsWith("❌")        => r,
+                string r                                => $"✅ {r}"
+            };
+        }
+        finally
+        {
+            _aiBalanceChecking = false;
+        }
+    }
+
     private async Task TestMqttConnectionAsync()
     {
         _mqttTestResult = null;
@@ -1447,6 +1861,11 @@
     {
         Loc.OnChange += StateHasChanged;
         var s = SettingsMonitor.CurrentValue;
+        // Check if we arrived here after a successful backup restore
+        var uri   = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _restored = query["restored"] == "1";
+        if (_restored) _openSections.Add("backup");
         _model = new FormModel
         {
             ListenIp            = s.ListenIp,
@@ -1526,6 +1945,16 @@
             QrzPassword             = s.Qrz.Password,
             QrzLogRequests          = s.Qrz.LogRequests,
             QrzCacheMaxAgeDays      = s.Qrz.CacheMaxAgeDays,
+            AiEnabled               = s.Ai.Enabled,
+            AiProvider              = s.Ai.Provider,
+            AiApiKey                = s.Ai.ApiKey,
+            AiModel                 = s.Ai.Model,
+            AiAzureEndpoint         = s.Ai.AzureEndpoint,
+            AiAzureApiVersion       = s.Ai.AzureApiVersion,
+            AiThresholdDays         = s.Ai.ThresholdDays,
+            AiSummaryDays           = s.Ai.SummaryDays,
+            AiMaxMessages           = s.Ai.MaxMessages,
+            AiLogRequests           = s.Ai.LogRequests,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -1549,6 +1978,513 @@
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
+        }
+    }
+
+    // ── Import / Export ───────────────────────────────────────────────────
+
+    private string? _importError;
+
+    // Export filenames (user-editable, with defaults)
+    private string _filenameBotCommands  = "MeshComWebDesk-bot-commands.json";
+    private string _filenameGroupLabels  = "MeshComWebDesk-group-labels.json";
+    private string _filenameQuickTexts   = "MeshComWebDesk-quick-texts.json";
+    private string _filenameBackup       = "MeshComWebDesk-settings.enc";
+
+    // ── Bot Commands ──────────────────────────────────────────────────────
+
+    private async Task ExportBotCommandsAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                _model.BotCommands,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var fn = string.IsNullOrWhiteSpace(_filenameBotCommands) ? "MeshComWebDesk-bot-commands.json" : _filenameBotCommands;
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", fn, json);
+        }
+        catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
+    }
+
+    private async Task ImportBotCommandsAsync(InputFileChangeEventArgs e)
+    {
+        _importError = null;
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 512 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var entries = System.Text.Json.JsonSerializer.Deserialize<List<BotCommandEntry>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (entries is null)
+            {
+                _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
+                    "Import failed: invalid JSON format.",
+                    "Importazione fallita: formato JSON non valido.",
+                    "Importación fallida: formato JSON no válido.");
+                return;
+            }
+
+            var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Name)).ToList();
+            if (invalid.Count > 0)
+            {
+                _importError = Loc.T(
+                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Name gefunden.",
+                    $"Import failed: {invalid.Count} entries without a name.",
+                    $"Importazione fallita: {invalid.Count} voci senza nome.",
+                    $"Importación fallida: {invalid.Count} entradas sin nombre.");
+                return;
+            }
+
+            _model.BotCommands = entries;
+            await SaveAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _importError = Loc.T(
+                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                $"Import failed: JSON error – {ex.Message}",
+                $"Importazione fallita: errore JSON – {ex.Message}",
+                $"Importación fallida: error JSON – {ex.Message}");
+        }
+        catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Group Labels ──────────────────────────────────────────────────────
+
+    private async Task ExportGroupLabelsAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                _model.GroupLabels,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var fn = string.IsNullOrWhiteSpace(_filenameGroupLabels) ? "MeshComWebDesk-group-labels.json" : _filenameGroupLabels;
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", fn, json);
+        }
+        catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
+    }
+
+    private async Task ImportGroupLabelsAsync(InputFileChangeEventArgs e)
+    {
+        _importError = null;
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 512 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var entries = System.Text.Json.JsonSerializer.Deserialize<List<GroupLabelEntry>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (entries is null)
+            {
+                _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
+                    "Import failed: invalid JSON format.",
+                    "Importazione fallita: formato JSON non valido.",
+                    "Importación fallida: formato JSON no válido.");
+                return;
+            }
+
+            var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Group)).ToList();
+            if (invalid.Count > 0)
+            {
+                _importError = Loc.T(
+                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Gruppen-Nummer gefunden.",
+                    $"Import failed: {invalid.Count} entries without a group number.",
+                    $"Importazione fallita: {invalid.Count} voci senza numero gruppo.",
+                    $"Importación fallida: {invalid.Count} entradas sin número de grupo.");
+                return;
+            }
+
+            _model.GroupLabels = entries;
+            await SaveAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _importError = Loc.T(
+                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                $"Import failed: JSON error – {ex.Message}",
+                $"Importazione fallita: errore JSON – {ex.Message}",
+                $"Importación fallida: error JSON – {ex.Message}");
+        }
+        catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Quick Texts ───────────────────────────────────────────────────────
+
+    private async Task ExportQuickTextsAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                _model.QuickTexts,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var fn = string.IsNullOrWhiteSpace(_filenameQuickTexts) ? "MeshComWebDesk-quick-texts.json" : _filenameQuickTexts;
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", fn, json);
+        }
+        catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
+    }
+
+    private async Task ImportQuickTextsAsync(InputFileChangeEventArgs e)
+    {
+        _importError = null;
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 512 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var entries = System.Text.Json.JsonSerializer.Deserialize<List<QuickTextEntry>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (entries is null)
+            {
+                _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
+                    "Import failed: invalid JSON format.",
+                    "Importazione fallita: formato JSON non valido.",
+                    "Importación fallida: formato JSON no válido.");
+                return;
+            }
+
+            var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Text)).ToList();
+            if (invalid.Count > 0)
+            {
+                _importError = Loc.T(
+                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Text gefunden.",
+                    $"Import failed: {invalid.Count} entries without text.",
+                    $"Importazione fallita: {invalid.Count} voci senza testo.",
+                    $"Importación fallida: {invalid.Count} entradas sin texto.");
+                return;
+            }
+
+            _model.QuickTexts = entries;
+            await SaveAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _importError = Loc.T(
+                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                $"Import failed: JSON error – {ex.Message}",
+                $"Importazione fallita: errore JSON – {ex.Message}",
+                $"Importación fallida: error JSON – {ex.Message}");
+        }
+        catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Full Settings Backup / Restore (AES-256-CBC + PBKDF2) ─────────────
+
+    private string _backupPassword  = string.Empty;
+    private string _restorePassword = string.Empty;
+    private string? _backupError;
+    private bool    _backupSuccess;
+
+    // Magic header to identify MeshComWebDesk backup files: ASCII "MCWD"
+    private static readonly byte[] BackupMagic = [0x4D, 0x43, 0x57, 0x44];
+
+    private async Task ExportSettingsAsync()
+    {
+        _backupError   = null;
+        _backupSuccess = false;
+
+        if (string.IsNullOrWhiteSpace(_backupPassword))
+        {
+            _backupError = Loc.T(
+                "Bitte ein Passwort eingeben.",
+                "Please enter a password.",
+                "Inserire una password.",
+                "Por favor, introduce una contraseña.");
+            return;
+        }
+
+        try
+        {
+            // Serialize current settings to JSON (all fields incl. sensitive ones)
+            var settings  = _model.ToSettings();
+            var json      = System.Text.Json.JsonSerializer.Serialize(
+                settings, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var plaintext = System.Text.Encoding.UTF8.GetBytes(json);
+            var password  = _backupPassword;
+
+            // Run CPU-intensive crypto on thread-pool so SignalR heartbeat is not blocked
+            var file = await Task.Run(() =>
+            {
+                var salt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
+                using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                    password, salt, 100_000,
+                    System.Security.Cryptography.HashAlgorithmName.SHA256);
+                var key = kdf.GetBytes(32);
+
+                using var aes = System.Security.Cryptography.Aes.Create();
+                aes.KeySize = 256;
+                aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
+                aes.Key     = key;
+                aes.GenerateIV();
+                var iv = aes.IV;
+
+                using var ms        = new System.IO.MemoryStream();
+                using var encryptor = aes.CreateEncryptor();
+                using var cs        = new System.Security.Cryptography.CryptoStream(
+                    ms, encryptor, System.Security.Cryptography.CryptoStreamMode.Write);
+                cs.Write(plaintext);
+                cs.FlushFinalBlock();
+                var ciphertext = ms.ToArray();
+
+                var result = new byte[BackupMagic.Length + salt.Length + iv.Length + ciphertext.Length];
+                var pos    = 0;
+                BackupMagic.CopyTo(result, pos); pos += BackupMagic.Length;
+                salt.CopyTo(result, pos);        pos += salt.Length;
+                iv.CopyTo(result, pos);          pos += iv.Length;
+                ciphertext.CopyTo(result, pos);
+                return result;
+            });
+
+            var fn = string.IsNullOrWhiteSpace(_filenameBackup) ? "MeshComWebDesk-settings.enc" : _filenameBackup;
+            await JS.InvokeVoidAsync("meshcomChat.downloadBinary", fn, file);
+
+            _backupSuccess  = true;
+            _backupPassword = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _backupError = $"Export: {ex.Message}";
+        }
+    }
+
+    private async Task ImportSettingsAsync(InputFileChangeEventArgs e)
+    {
+        _backupError   = null;
+        _backupSuccess = false;
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(_restorePassword))
+        {
+            _backupError = Loc.T(
+                "Bitte das Passwort der Backup-Datei eingeben.",
+                "Please enter the backup file password.",
+                "Inserire la password del file di backup.",
+                "Por favor, introduce la contraseña del archivo de copia de seguridad.");
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var browserFile = e.File;
+            if (browserFile is null) return;
+
+            // Read file directly via Blazor IBrowserFile – avoids JS-interop SignalR size limit
+            using var stream = browserFile.OpenReadStream(maxAllowedSize: 1024 * 1024); // 1 MB max
+            using var ms     = new System.IO.MemoryStream();
+            await stream.CopyToAsync(ms);
+            var file = ms.ToArray();
+
+            // Validate magic header
+            if (file.Length < BackupMagic.Length + 16 + 16 + 1 ||
+                !file.Take(BackupMagic.Length).SequenceEqual(BackupMagic))
+            {
+                _backupError = Loc.T(
+                    "Ungültige Backup-Datei (kein MeshComWebDesk-Format).",
+                    "Invalid backup file (not a MeshComWebDesk format).",
+                    "File di backup non valido (formato non MeshComWebDesk).",
+                    "Archivo de copia de seguridad no válido (no es formato MeshComWebDesk).");
+                StateHasChanged();
+                return;
+            }
+
+            var pos  = BackupMagic.Length;
+            var salt = file[pos..(pos + 16)]; pos += 16;
+            var iv   = file[pos..(pos + 16)]; pos += 16;
+            var ciphertext = file[pos..];
+            var password   = _restorePassword;
+
+            // Run CPU-intensive PBKDF2 + AES on thread-pool so SignalR heartbeat is not blocked
+            byte[]? plaintext = null;
+            string? cryptoError = null;
+            await Task.Run(() =>
+            {
+                try
+                {
+                    using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                        password, salt, 100_000,
+                        System.Security.Cryptography.HashAlgorithmName.SHA256);
+                    var key = kdf.GetBytes(32);
+
+                    using var aes = System.Security.Cryptography.Aes.Create();
+                    aes.KeySize = 256;
+                    aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
+                    aes.Key     = key;
+                    aes.IV      = iv;
+
+                    using var ms        = new System.IO.MemoryStream();
+                    using var decryptor = aes.CreateDecryptor();
+                    using var cs        = new System.Security.Cryptography.CryptoStream(
+                        ms, decryptor, System.Security.Cryptography.CryptoStreamMode.Write);
+                    cs.Write(ciphertext);
+                    cs.FlushFinalBlock();
+                    plaintext = ms.ToArray();
+                }
+                catch (System.Security.Cryptography.CryptographicException)
+                {
+                    cryptoError = "crypto";
+                }
+            });
+
+            if (cryptoError != null)
+            {
+                _backupError = Loc.T(
+                    "Entschlüsselung fehlgeschlagen – falsches Passwort oder beschädigte Datei.",
+                    "Decryption failed – wrong password or corrupted file.",
+                    "Decrittazione fallita – password errata o file danneggiato.",
+                    "Descifrado fallido – contraseña incorrecta o archivo dañado.");
+                StateHasChanged();
+                return;
+            }
+
+            var json = System.Text.Encoding.UTF8.GetString(plaintext!);
+
+            MeshcomSettings? imported;
+            try
+            {
+                imported = System.Text.Json.JsonSerializer.Deserialize<MeshcomSettings>(json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                _backupError = Loc.T(
+                    $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                    $"Import failed: JSON error – {ex.Message}",
+                    $"Importazione fallita: errore JSON – {ex.Message}",
+                    $"Importación fallida: error JSON – {ex.Message}");
+                StateHasChanged();
+                return;
+            }
+
+            if (imported is null)
+            {
+                _backupError = Loc.T(
+                    "Import fehlgeschlagen: Ungültiges Format.",
+                    "Import failed: invalid format.",
+                    "Importazione fallita: formato non valido.",
+                    "Importación fallida: formato no válido.");
+                StateHasChanged();
+                return;
+            }
+
+            // Null-safety: ensure nested objects and collections exist
+            imported.QuickTexts       ??= [];
+            imported.GroupLabels      ??= [];
+            imported.BotCommands      ??= [];
+            imported.TelemetryMapping ??= [];
+            imported.WatchCallsigns   ??= [];
+            imported.Groups           ??= [];
+            imported.Database         ??= new();
+            imported.Webhook          ??= new();
+            imported.Mqtt             ??= new();
+            imported.Qrz              ??= new();
+            imported.Ai               ??= new();
+
+            // Load imported settings into form model (same mapping as OnInitialized)
+            var s = imported;
+            _model = new FormModel
+            {
+                ListenIp            = s.ListenIp,
+                ListenPort          = s.ListenPort,
+                DeviceIp            = s.DeviceIp,
+                DevicePort          = s.DevicePort,
+                MyCallsign          = s.MyCallsign,
+                LogPath             = s.LogPath,
+                LogRetainDays       = s.LogRetainDays,
+                LogUdpTraffic       = s.LogUdpTraffic,
+                MonitorMaxMessages  = s.MonitorMaxMessages,
+                GroupFilterEnabled  = s.GroupFilterEnabled,
+                GroupsText          = string.Join("\n", s.Groups),
+                WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+                WatchOnMessage      = s.WatchOnMessage,
+                WatchOnPosition     = s.WatchOnPosition,
+                WatchOnTelemetry    = s.WatchOnTelemetry,
+                WatchOnAck          = s.WatchOnAck,
+                WatchAlertMinutes   = s.WatchAlertMinutes,
+                DataPath            = s.DataPath,
+                TimeOffsetHours     = s.TimeOffsetHours,
+                AutoReplyEnabled    = s.AutoReplyEnabled,
+                AutoReplyText       = s.AutoReplyText,
+                BotEnabled          = s.BotEnabled,
+                BotCommands         = s.BotCommands
+                    .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
+                    .ToList(),
+                BeaconEnabled       = s.BeaconEnabled,
+                BeaconGroup         = s.BeaconGroup,
+                BeaconText          = s.BeaconText,
+                BeaconIntervalHours = s.BeaconIntervalHours,
+                TelemetryEnabled       = s.TelemetryEnabled,
+                TelemetryFilePath      = s.TelemetryFilePath,
+                TelemetryGroup         = s.TelemetryGroup,
+                TelemetryScheduleHours = s.TelemetryScheduleHours,
+                TelemetryMapping       = s.TelemetryMapping
+                    .Select(m => new TelemetryMappingEntry { JsonKey = m.JsonKey, Label = m.Label, Unit = m.Unit, Decimals = m.Decimals, WeatherRole = m.WeatherRole })
+                    .ToList(),
+                TelemetryApiEnabled = s.TelemetryApiEnabled,
+                TelemetryApiKey     = s.TelemetryApiKey,
+                Language            = s.Language,
+                DbProvider              = s.Database.Provider,
+                DbMySqlConnectionString = s.Database.MySqlConnectionString,
+                DbMySqlTableName        = s.Database.MySqlTableName,
+                DbInfluxUrl             = s.Database.InfluxUrl,
+                DbInfluxToken           = s.Database.InfluxToken,
+                DbInfluxOrg             = s.Database.InfluxOrg,
+                DbInfluxBucket          = s.Database.InfluxBucket,
+                DbLogInserts            = s.Database.LogInserts,
+                WebhookEnabled     = s.Webhook.Enabled,
+                WebhookUrl         = s.Webhook.Url,
+                WebhookOnMessage   = s.Webhook.OnMessage,
+                WebhookOnPosition  = s.Webhook.OnPosition,
+                WebhookOnTelemetry = s.Webhook.OnTelemetry,
+                MqttEnabled             = s.Mqtt.Enabled,
+                MqttHost                = s.Mqtt.Host,
+                MqttPort                = s.Mqtt.Port,
+                MqttClientId            = s.Mqtt.ClientId,
+                MqttUsername            = s.Mqtt.Username,
+                MqttPassword            = s.Mqtt.Password,
+                MqttUseTls              = s.Mqtt.UseTls,
+                MqttTopicPrefix         = s.Mqtt.TopicPrefix,
+                MqttPublishMessage      = s.Mqtt.PublishMessage,
+                MqttPublishPosition     = s.Mqtt.PublishPosition,
+                MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+                MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
+                MqttLogRequests         = s.Mqtt.LogRequests,
+                QrzEnabled         = s.Qrz.Enabled,
+                QrzUsername        = s.Qrz.Username,
+                QrzPassword        = s.Qrz.Password,
+                QrzLogRequests     = s.Qrz.LogRequests,
+                QrzCacheMaxAgeDays = s.Qrz.CacheMaxAgeDays,
+                AiEnabled          = s.Ai.Enabled,
+                AiProvider         = s.Ai.Provider,
+                AiApiKey           = s.Ai.ApiKey,
+                AiModel            = s.Ai.Model,
+                AiAzureEndpoint    = s.Ai.AzureEndpoint,
+                AiAzureApiVersion  = s.Ai.AzureApiVersion,
+                AiThresholdDays    = s.Ai.ThresholdDays,
+                AiSummaryDays      = s.Ai.SummaryDays,
+                AiMaxMessages      = s.Ai.MaxMessages,
+                AiLogRequests      = s.Ai.LogRequests,
+                QuickTexts  = s.QuickTexts.Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text }).ToList(),
+                GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
+            };
+            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+            // Reload page – file-watcher triggers config reload which drops the SignalR
+            // connection; navigating first ensures a clean reconnect with success feedback.
+            Nav.NavigateTo("/settings?restored=1", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _backupError = $"Import: {ex.Message}";
+            StateHasChanged();
         }
     }
 
@@ -1628,6 +2564,18 @@
         public string QrzPassword        { get; set; } = string.Empty;
         public bool   QrzLogRequests     { get; set; }
         public int    QrzCacheMaxAgeDays { get; set; } = 30;
+
+        // AI / QSO Summary
+        public bool   AiEnabled          { get; set; }
+        public string AiProvider         { get; set; } = MeshcomWebDesk.Models.AiSettings.ProviderOpenAi;
+        public string AiApiKey           { get; set; } = string.Empty;
+        public string AiModel            { get; set; } = "gpt-4o-mini";
+        public string AiAzureEndpoint    { get; set; } = string.Empty;
+        public string AiAzureApiVersion  { get; set; } = "2024-08-01-preview";
+        public int    AiThresholdDays    { get; set; } = 7;
+        public int    AiSummaryDays      { get; set; } = 365;
+        public int    AiMaxMessages      { get; set; } = 50;
+        public bool   AiLogRequests      { get; set; }
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -1720,6 +2668,19 @@
                 Password        = QrzPassword,
                 LogRequests     = QrzLogRequests,
                 CacheMaxAgeDays = QrzCacheMaxAgeDays
+            },
+            Ai = new MeshcomWebDesk.Models.AiSettings
+            {
+                Enabled          = AiEnabled,
+                Provider         = AiProvider,
+                ApiKey           = AiApiKey,
+                Model            = AiModel,
+                AzureEndpoint    = AiAzureEndpoint,
+                AzureApiVersion  = string.IsNullOrWhiteSpace(AiAzureApiVersion) ? "2024-08-01-preview" : AiAzureApiVersion,
+                ThresholdDays = AiThresholdDays,
+                SummaryDays   = AiSummaryDays,
+                MaxMessages   = AiMaxMessages,
+                LogRequests   = AiLogRequests
             },
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels

@@ -193,6 +193,12 @@ window.meshcomChat = (function () {
         },
         setMonitorVisible: (visible) =>
             localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0'),
+        getVoiceEnabled: () => {
+            var v = localStorage.getItem('meshcom-voice-enabled');
+            return v === null ? null : v === '1';
+        },
+        setVoiceEnabled: (enabled) =>
+            localStorage.setItem('meshcom-voice-enabled', enabled ? '1' : '0'),
         getTabOrder: () => {
             var v = localStorage.getItem('meshcom-tab-order');
             try { return v ? JSON.parse(v) : []; } catch (e) { return []; }
@@ -200,7 +206,152 @@ window.meshcomChat = (function () {
         setTabOrder: (keys) =>
             localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
         getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
-        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? '')
+        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
+        getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
+        setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
+        showWelcomeDialog:   (version, txtQuestion, txtYes, txtNo, author) => {
+            if (document.getElementById('welcome-dialog-overlay')) return;
+            var overlay = document.createElement('div');
+            overlay.id = 'welcome-dialog-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center';
+            overlay.innerHTML =
+                '<div style="background:#161b22;border:2px solid #58a6ff;border-radius:12px;padding:2rem;max-width:400px;text-align:center;color:#c9d1d9;font-family:inherit">' +
+                '<div style="font-size:3rem">☕</div>' +
+                '<h2 style="color:#a0c4ff;margin:0.5rem 0">MeshCom WebDesk v' + version + '</h2>' +
+                '<p style="color:#a0c4ff;margin:0.5rem 0;line-height:1.5">' + txtQuestion + '</p>' +
+                '<p style="font-size:0.8rem;color:#8b949e;margin:0.5rem 0">' + author + '</p>' +
+                '<div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem">' +
+                '<button id="welcome-btn-yes" style="background:#c8a84b;color:#0d1117;border:none;border-radius:8px;padding:0.65rem;font-weight:700;cursor:pointer;font-size:1rem">☕ ' + txtYes + '</button>' +
+                '<button id="welcome-btn-no" style="background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:8px;padding:0.55rem;cursor:pointer">😐 ' + txtNo + '</button>' +
+                '</div></div>';
+            document.body.appendChild(overlay);
+            function dismiss() {
+                localStorage.setItem('meshcom-welcomed-version', version);
+                overlay.remove();
+            }
+            overlay.querySelector('#welcome-btn-yes').addEventListener('click', function() {
+                dismiss();
+                window.open('https://paypal.me/DH1FR', '_blank');
+            });
+            overlay.querySelector('#welcome-btn-no').addEventListener('click', dismiss);
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) dismiss(); });
+        },
+
+        // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
+        getSendBarValue: (id) => {
+            var el = document.getElementById(id);
+            return el ? el.value : '';
+        },
+
+        // ── SendBar: setzt den Wert (z.B. nach Senden leeren oder QuickText laden) ──
+        setSendBarValue: (id, value) => {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.value = value;
+            // Counter manuell aktualisieren
+            var counter = el.closest('.send-bar') && el.closest('.send-bar').querySelector('.char-counter');
+            if (counter) {
+                var len = value.length;
+                counter.textContent = len + '/149';
+                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            }
+        },
+
+        // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
+        initSendBarCounter: (id, dotNetRef) => {            var el = document.getElementById(id);
+            if (!el || el.dataset.counterInit) return;
+            el.dataset.counterInit = '1';
+
+            // Live-Counter
+            el.addEventListener('input', function () {
+                var bar     = el.closest('.send-bar');
+                var counter = bar && bar.querySelector('.char-counter');
+                if (!counter) return;
+                var len = el.value.length;
+                counter.textContent = len + '/149';
+                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            });
+
+            // Keyboard: Enter = senden, Tab = Variablen expandieren – KEIN Blazor @onkeydown
+            el.addEventListener('keydown', async function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (dotNetRef) await dotNetRef.invokeMethodAsync('JsSendAsync');
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    if (dotNetRef && el.value.includes('{')) {
+                        var expanded = await dotNetRef.invokeMethodAsync('JsExpandVariables', el.value);
+                        el.value = expanded;
+                        // Counter aktualisieren
+                        var bar     = el.closest('.send-bar');
+                        var counter = bar && bar.querySelector('.char-counter');
+                        if (counter) {
+                            var len = expanded.length;
+                            counter.textContent = len + '/149';
+                            counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+                        }
+                    }
+                }
+            });
+        },
+
+        // ── Import/Export: JSON-Datei herunterladen ──────────────────────────────────
+        downloadJson: (filename, json) => {
+            var blob = new Blob([json], { type: 'application/json' });
+            var url  = URL.createObjectURL(blob);
+            var a    = document.createElement('a');
+            a.href     = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        },
+
+        // ── Import/Export: JSON-Datei vom User einlesen und als String zurückgeben ──
+        readJsonFile: (inputId) => new Promise((resolve, reject) => {
+            var input = document.getElementById(inputId);
+            if (!input || !input.files || input.files.length === 0) {
+                resolve(null);
+                return;
+            }
+            var file   = input.files[0];
+            var reader = new FileReader();
+            reader.onload  = e  => { input.value = ''; resolve(e.target.result); };
+            reader.onerror = () => { input.value = ''; reject(new Error('File read error')); };
+            reader.readAsText(file, 'UTF-8');
+        }),
+
+        // ── Import/Export: Binärdaten (Uint8Array) als Datei herunterladen ──────
+        downloadBinary: (filename, bytes) => {
+            var blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
+            var url  = URL.createObjectURL(blob);
+            var a    = document.createElement('a');
+            a.href     = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        },
+
+        // ── Import/Export: Binärdatei lesen und als Byte-Array zurückgeben ──────
+        readBinaryFile: (inputId) => new Promise((resolve, reject) => {
+            var input = document.getElementById(inputId);
+            if (!input || !input.files || input.files.length === 0) {
+                resolve(null);
+                return;
+            }
+            var file   = input.files[0];
+            var reader = new FileReader();
+            reader.onload  = e => {
+                input.value = '';
+                var buf   = e.target.result;
+                resolve(Array.from(new Uint8Array(buf)));
+            };
+            reader.onerror = () => { input.value = ''; reject(new Error('File read error')); };
+            reader.readAsArrayBuffer(file);
+        })
     };
 }());
 

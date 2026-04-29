@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
     <meta charset="utf-8" />
@@ -115,6 +115,25 @@
                 }
             };
         })();
+
+        // ── Text-to-Speech via Web Speech API ────────────────────────────────
+        window.speakText = function (text, lang) {
+            try {
+                if (!window.speechSynthesis) return;
+                // Cancel any currently running utterance so new one starts immediately
+                window.speechSynthesis.cancel();
+                var utter = new SpeechSynthesisUtterance(text);
+                // Map our lang codes to BCP-47 locale codes
+                var localeMap = { 'de': 'de-DE', 'en': 'en-US', 'it': 'it-IT', 'es': 'es-ES' };
+                utter.lang = localeMap[lang] || 'de-DE';
+                utter.rate = 0.95;   // slightly slower for clarity
+                utter.pitch = 1.0;
+                utter.volume = 1.0;
+                window.speechSynthesis.speak(utter);
+            } catch (e) {
+                console.warn('speakText failed:', e);
+            }
+        };
 
         // Register service worker for PWA install prompt
         if ('serviceWorker' in navigator) {

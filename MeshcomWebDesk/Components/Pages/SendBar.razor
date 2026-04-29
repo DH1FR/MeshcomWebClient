@@ -28,13 +28,15 @@
                     @onclick="ToggleFlyout"
                     title="@Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")">⚡</button>
         }
-        <input @bind="_text" @bind:event="oninput"
-               placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
-               maxlength="149"
-               @onkeydown="OnKeyDown" />
-        <span class="char-counter @CounterCss">@_text.Length/149</span>
-        <button class="btn-send" @onclick="SendAsync"
-                disabled="@(!CanSend)">
+        <textarea id="send-bar-input"
+                  placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
+                  maxlength="149"
+                  spellcheck="true"
+                  autocomplete="on"
+                  lang="de"
+                  rows="1"></textarea>
+        <span class="char-counter">0/149</span>
+        <button class="btn-send" @onclick="SendAsync">
             @Loc.T("Senden", "Send", "Invia", "Enviar")
         </button>
     </div>
@@ -56,25 +58,31 @@
     private const int MaxLength = 149;
     private DotNetObjectReference<SendBar>? _dotNetRef;
 
-    private bool CanSend =>
-        !string.IsNullOrWhiteSpace(_text) && _text.Length <= MaxLength;
-
-    private string CounterCss => _text.Length switch
-    {
-        >= 145 => "char-danger",
-        >= 130 => "char-warn",
-        _      => string.Empty
-    };
+    private bool CanSend => true; // Validierung erfolgt beim Senden via JS
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += StateHasChanged;
+        Loc.OnChange += ForceRerender;
         LoadQuickTextsFromSettings();
-        SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(StateHasChanged); });
+        SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
+    }
+
+    private bool _rendered;
+
+    protected override bool ShouldRender()
+    {
+        if (!_rendered) { _rendered = true; return true; }
+        return false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("meshcomChat.initSendBarCounter", "send-bar-input", _dotNetRef);
+        }
+
         if (_flyoutOpen && _quickTexts.Count > 0)
         {
             _dotNetRef ??= DotNetObjectReference.Create(this);
@@ -84,7 +92,7 @@
 
     public void Dispose()
     {
-        Loc.OnChange -= StateHasChanged;
+        Loc.OnChange -= ForceRerender;
         _dotNetRef?.Dispose();
     }
 
@@ -130,42 +138,44 @@
         // Save to appsettings.override.json
         _ = SettingsSvc.SaveMeshcomSettingsAsync(SettingsMonitor.CurrentValue);
 
+        _rendered = false;
         await InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleFlyout() => _flyoutOpen = !_flyoutOpen;
+    private void ForceRerender() { _rendered = false; StateHasChanged(); }
 
-    private void LoadQuickText(string text)
+    private void ToggleFlyout() { _flyoutOpen = !_flyoutOpen; ForceRerender(); }
+
+    private async Task LoadQuickText(string text)
     {
         var expanded = UdpService.ExpandVariables(text, Callsign);
         _text       = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _flyoutOpen = false;
+        _rendered   = false;
+        await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
+    }
+
+    [JSInvokable]
+    public async Task JsSendAsync()
+    {
+        _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
+        if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
+        var expanded = UdpService.ExpandVariables(_text, Callsign);
+        var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
+        _text = string.Empty;
+        await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", string.Empty);
+        await OnSend.InvokeAsync(text);
+    }
+
+    [JSInvokable]
+    public async Task<string> JsExpandVariables(string text)
+    {
+        var expanded = UdpService.ExpandVariables(text, Callsign);
+        return expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
     }
 
     private async Task SendAsync()
     {
-        if (!CanSend) return;
-        // Always expand variables before sending
-        var expanded = UdpService.ExpandVariables(_text, Callsign);
-        var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
-        _text = string.Empty;
-        await OnSend.InvokeAsync(text);
-    }
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            await SendAsync();
-        }
-        else if (e.Key == "Tab")
-        {
-            // Tab: expand variables inline as a preview
-            if (_text.Contains('{'))
-            {
-                var expanded = UdpService.ExpandVariables(_text, Callsign);
-                _text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
-            }
-        }
+        await JsSendAsync();
     }
 }

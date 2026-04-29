@@ -10,6 +10,8 @@
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject IJSRuntime JS
 @inject QrzService QrzService
+@inject QsoSummaryService QsoSummaryService
+@inject ElevationService ElevationService
 @inject ILogger<Map> Logger
 @implements IDisposable
 
@@ -37,6 +39,12 @@
                 @onclick="ToggleRelayLines"
                 title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths", "Mostra/nascondi percorsi relay", "Mostrar/ocultar rutas de relé")">
             🔗 @Loc.T("Pfade", "Paths", "Percorsi", "Rutas")
+        </button>
+        <button class="map-ctrl-btn @(_showCoverage ? "map-ctrl-active" : "")"
+                @onclick="ToggleCoverageAsync"
+                title="@Loc.T("Reichweiten-Wolke ein/ausblenden", "Toggle coverage cloud", "Mostra/nascondi copertura", "Mostrar/ocultar cobertura")">
+            <span>📶</span>
+            @Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")
         </button>
         <span class="map-ctrl-sep"></span>
         <div class="map-search-wrap-ctrl">
@@ -96,6 +104,15 @@
                         <span class="leg-dot-own"></span>
                         <span>@Loc.T("Eigene Position", "Own position", "Posizione propria", "Posición propia")</span>
                     </div>
+                    @if (_showCoverage)
+                    {
+                        <div class="map-legend-section">@Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")</div>
+                        <div class="map-legend-row">
+                            <span class="leg-coverage leg-coverage-measured"></span>
+                            <span>📡 @Loc.T("Gemessen (Convex Hull)", "Measured (convex hull)", "Misurata (hull)", "Medida (hull)")</span>
+                        </div>
+
+                    }
                     @if (_showRelayLines)
                     {
                         <div class="map-legend-section">@Loc.T("Relay-Pfade", "Relay paths", "Percorsi relay", "Rutas relay")</div>
@@ -154,12 +171,14 @@
     private bool _hasPositions;
     private bool _mapInitialized;
     private bool _disposed;
-    private bool _showRelayLines = true;
-    private bool _showLegend    = true;
+    private bool _showRelayLines   = true;
+    private bool _showLegend       = true;
+    private bool _showCoverage;
     private string       _searchCallsign    = "";
     private bool         _searchNotFound;
     private List<string> _searchResults     = [];
     private bool         _showSearchResults;
+    private DotNetObjectReference<Map>? _dotNetRef;
 
     protected override void OnInitialized()
     {
@@ -199,9 +218,11 @@
             try
             {
                 var status = UdpService.Status;
+                _dotNetRef ??= DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map",
                     status.OwnLatitude.HasValue  ? (object)status.OwnLatitude.Value  : null,
-                    status.OwnLongitude.HasValue ? (object)status.OwnLongitude.Value : null);
+                    status.OwnLongitude.HasValue ? (object)status.OwnLongitude.Value : null,
+                    _dotNetRef);
                 _mapInitialized = true;
                 await UpdateMarkersAsync();
                 StateHasChanged();
@@ -454,8 +475,102 @@
     public void Dispose()
     {
         _disposed = true;
+        _dotNetRef?.Dispose();
         Loc.OnChange              -= StateHasChanged;
         ChatService.OnChange      -= OnDataChanged;
         UdpService.OnStatusChange -= OnDataChanged;
+    }
+
+    [JSInvokable]
+    public async Task OnAiPopupRequestAsync(string callsign)
+    {
+        try
+        {
+            var mhList     = ChatService.MhList;
+            var myCallsign = SettingsMonitor.CurrentValue.MyCallsign;
+            var station    = mhList.FirstOrDefault(s =>
+                s.Callsign.Equals(callsign, StringComparison.OrdinalIgnoreCase));
+
+            // Build a station context prompt for the AI
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Gib eine kurze Stationsbeschreibung für {callsign} anhand der folgenden Daten.");
+            sb.AppendLine("Antworte kompakt in 2-4 Sätzen. Sprache: Deutsch.");
+            sb.AppendLine();
+            if (station != null)
+            {
+                sb.AppendLine($"Rufzeichen: {station.Callsign}");
+                if (station.Firmware   != null) sb.AppendLine($"Firmware: {station.Firmware}");
+                if (station.HwId       != null) sb.AppendLine($"Hardware: {MeshcomLookup.HwName(station.HwId)}");
+                if (station.LastRssi   != null) sb.AppendLine($"RSSI: {station.LastRssi} dBm");
+                if (station.LastSnr    != null) sb.AppendLine($"SNR: {station.LastSnr:F1} dB");
+                if (station.Battery    != null) sb.AppendLine($"Akku: {station.Battery}%");
+                if (station.Latitude.HasValue && station.Longitude.HasValue)
+                {
+                    sb.AppendLine($"Position: {station.Latitude:F4}°N {station.Longitude:F4}°E");
+                    sb.AppendLine($"Maidenhead: {GeoHelper.ToMaidenhead(station.Latitude.Value, station.Longitude.Value)}");
+                }
+                if (station.HopCount > 0)
+                    sb.AppendLine($"Relay-Hops: {station.HopCount} via {station.LastRelayPath}");
+                sb.AppendLine($"Nachrichten empfangen: {station.MessageCount}");
+                sb.AppendLine($"Zuletzt gehört: {station.LastHeard:dd.MM.yyyy HH:mm}");
+                if (!string.IsNullOrWhiteSpace(station.LastMessage))
+                    sb.AppendLine($"Letzte Nachricht: {station.LastMessage}");
+            }
+
+            var qrz = QrzService.GetCached(callsign);
+            if (qrz != null)
+            {
+                if (qrz.FirstName != null) sb.AppendLine($"Name (QRZ): {qrz.FirstName}");
+                if (qrz.Location  != null) sb.AppendLine($"QTH (QRZ): {qrz.Location}");
+            }
+
+            var result = await QsoSummaryService.SearchAsync(
+                callsign, myCallsign, sb.ToString(), mhList);
+
+            var html = result is not null
+                ? System.Net.WebUtility.HtmlEncode(result).Replace("\n", "<br>")
+                : "<span style='color:#f85149'>KI nicht verfügbar (API-Key prüfen)</span>";
+
+            await JS.InvokeVoidAsync("meshcomMap.updatePopupAiContent", callsign, html);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Map: OnAiPopupRequestAsync failed for {Callsign}", callsign);
+            await JS.InvokeVoidAsync("meshcomMap.updatePopupAiContent", callsign,
+                "<span style='color:#f85149'>Error: " +
+                System.Net.WebUtility.HtmlEncode(ex.Message) + "</span>");
+        }
+    }
+
+    private async Task ToggleCoverageAsync()
+    {
+        _showCoverage = !_showCoverage;
+        if (!_mapInitialized) return;
+
+        if (!_showCoverage)
+        {
+            await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+            return;
+        }
+
+        var status = UdpService.Status;
+        if (!status.OwnLatitude.HasValue || !status.OwnLongitude.HasValue)
+        {
+            await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+            _showCoverage = false;
+            return;
+        }
+
+        // Measured hull – nur aktuell direkt empfangene Stationen (HopCount == 0, kein Relay)
+        var measuredPoints = ChatService.MhList
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
+            .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
+            .ToArray();
+
+        await JS.InvokeVoidAsync("meshcomMap.setCoverage",
+            measuredPoints,
+            null,
+            status.OwnLatitude.Value,
+            status.OwnLongitude.Value);
     }
 }
