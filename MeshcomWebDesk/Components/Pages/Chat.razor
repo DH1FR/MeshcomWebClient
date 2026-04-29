@@ -759,6 +759,9 @@
     private bool? _voiceEnabled;   // null = not yet loaded from localStorage
     private bool _playSound;
     private readonly Queue<string> _pendingSpeech = new();
+    // Zeitpunkt der letzten TTS-Ansage "Nachricht von …" pro Rufzeichen
+    private readonly Dictionary<string, DateTime> _lastDirectSpeechTime = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan DirectSpeechCooldown = TimeSpan.FromMinutes(5);
 
     // Recent partners flyout
     private bool _showRecentPartners;
@@ -1089,25 +1092,32 @@
     private void HandleNewDirectTab(string callsign)
     {
         if (_voiceEnabled != true) return;
-        var phonetic  = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
-        var firstName = QrzFirstName(callsign);
-        var text = Loc.T(
-            $"Nachricht von {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Messaggio da {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Mensaje de {phonetic}{(firstName != null ? ". " + firstName : "")}");
-        // Direct message has highest priority – prepend before any watchlist entries
-        var existing = _pendingSpeech.ToArray();
-        _pendingSpeech.Clear();
-        _pendingSpeech.Enqueue(text);
-        foreach (var e in existing) _pendingSpeech.Enqueue(e);
+        SpeakDirectMessage(callsign);
         InvokeAsync(StateHasChanged);
     }
 
-    // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): ebenfalls TTS mit Priorität
+    // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): TTS nur wenn Cooldown abgelaufen
     private void HandleDirectMessage(string callsign, MeshcomMessage message)
     {
         if (_voiceEnabled != true) return;
+        SpeakDirectMessage(callsign);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Spielt die "Nachricht von …"-Ansage, wenn seit der letzten Ansage für dieses
+    /// Rufzeichen mehr als <see cref="DirectSpeechCooldown"/> vergangen sind (oder
+    /// noch keine Ansage stattfand). Mehrfach-Ansagen bei schnellen Folgenachrichten
+    /// werden so unterdrückt.
+    /// </summary>
+    private void SpeakDirectMessage(string callsign)
+    {
+        var now = DateTime.Now;
+        if (_lastDirectSpeechTime.TryGetValue(callsign, out var last) &&
+            (now - last) < DirectSpeechCooldown)
+            return;
+
+        _lastDirectSpeechTime[callsign] = now;
         var phonetic  = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
         var firstName = QrzFirstName(callsign);
         var text = Loc.T(
@@ -1120,7 +1130,6 @@
         _pendingSpeech.Clear();
         _pendingSpeech.Enqueue(text);
         foreach (var e in existing) _pendingSpeech.Enqueue(e);
-        InvokeAsync(StateHasChanged);
     }
 
     private void SelectTab(string key)
