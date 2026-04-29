@@ -1003,9 +1003,11 @@
                 var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
                 if (welcomed != _appVersion)
                 {
-                    await Task.Delay(3000);
-                    _showWelcomeDialog = true;
-                    StateHasChanged();
+                    var timer = new System.Threading.Timer(_ =>
+                    {
+                        if (!_disposed)
+                            InvokeAsync(() => { _showWelcomeDialog = true; StateHasChanged(); });
+                    }, null, 3000, System.Threading.Timeout.Infinite);
                 }
             }
             catch { }
