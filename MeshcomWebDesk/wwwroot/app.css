@@ -1446,15 +1446,17 @@ h1:focus {
     min-height: 28px;
     flex-shrink: 0;
     overflow: hidden;
+    container-type: inline-size;
+    container-name: statusbar;
 }
 
-/* Tablet (≤ 900px): DeviceIP ausblenden */
-@media (max-width: 900px) {
+/* Wenn die Statusleiste selbst schmaler als 900px ist: DeviceIP ausblenden */
+@container statusbar (max-width: 900px) {
     .status-compact { display: none !important; }
 }
 
-/* Mobil (≤ 600px): alle Detail-Infos ausblenden */
-@media (max-width: 600px) {
+/* Wenn die Statusleiste selbst schmaler als 600px ist: alle Detail-Infos ausblenden */
+@container statusbar (max-width: 600px) {
     .status-detail { display: none !important; }
 }
 
