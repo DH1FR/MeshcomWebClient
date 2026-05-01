@@ -16,7 +16,6 @@
 
 ### Bugfixes
 - **MH Max. Alter**: Der Wert `MhMaxAgeHours` wurde nach einem Seitenwechsel auf 0 zurückgesetzt – Fehler in `SettingsService` behoben, der Wert wird jetzt korrekt in `appsettings.override.json` gespeichert.
-- **Kaffee-Dialog**: Hinweis „Gefällt dir MeshComWebDesk?" erscheint jetzt nur noch bei einer neuen **Major-Version** (nicht mehr bei jeder Versionsnummer).
 
 ---
 
