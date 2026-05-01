@@ -1433,7 +1433,7 @@ h1:focus {
 /* ===== Status Bar ===== */
 .status-bar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 4px;
     padding: 4px 12px;
@@ -1445,6 +1445,17 @@ h1:focus {
     color: #8b949e;
     min-height: 28px;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+/* Tablet (≤ 900px): DeviceIP ausblenden */
+@media (max-width: 900px) {
+    .status-compact { display: none !important; }
+}
+
+/* Mobil (≤ 600px): alle Detail-Infos ausblenden */
+@media (max-width: 600px) {
+    .status-detail { display: none !important; }
 }
 
 .status-item {
