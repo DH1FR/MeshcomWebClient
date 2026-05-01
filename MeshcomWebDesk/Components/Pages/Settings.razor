@@ -12,6 +12,7 @@
 @inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject NavigationManager Nav
+@inject ChatService ChatService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -43,6 +44,7 @@
         <!-- Verbindung / Connection -->
         <div class="settings-section @(IsOpen("conn") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("conn")'>🔌 @Loc.T("Verbindung", "Connection", "Connessione", "Conexión") <span class="section-chevron">@(IsOpen("conn") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("conn")) {
             <div class="settings-grid">
                 <label>Listen IP</label>
                 <input type="text" @bind="_model.ListenIp" />
@@ -69,11 +71,13 @@
                     "¿Cómo configuro mi nodo MeshCom para WebDesk?")
                 <span class="settings-help-banner-arrow">→</span>
             </a>
+            }
         </div>
 
         <!-- Logging -->
         <div class="settings-section @(IsOpen("log") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("log")'>📝 Logging <span class="section-chevron">@(IsOpen("log") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("log")) {
             <div class="settings-grid">
                 <label>@Loc.T("Log-Pfad", "Log Path", "Percorso Log", "Ruta de Log")</label>
                 <input type="text" @bind="_model.LogPath" />
@@ -89,14 +93,22 @@
                     <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
                 </label>
             </div>
+            }
         </div>
 
         <!-- Chat & Monitor -->
         <div class="settings-section @(IsOpen("chat") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("chat")'>💬 Chat &amp; Monitor <span class="section-chevron">@(IsOpen("chat") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("chat")) {
             <div class="settings-grid">
                 <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)", "Limite monitor (voci)", "Límite monitor (entradas)")</label>
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
+
+                <label>
+                    @Loc.T("MH-Liste: Max. Alter (Stunden)", "MH List: Max. Age (Hours)", "Lista MH: Età max. (ore)", "Lista MH: Edad máx. (horas)")<br />
+                    <small>@Loc.T("Einträge älter als x Stunden werden automatisch gelöscht. 0 = deaktiviert. (z. B. 24 = 1 Tag, 168 = 1 Woche)", "Entries older than x hours are automatically removed. 0 = disabled. (e.g. 24 = 1 day, 168 = 1 week)", "Voci più vecchie di x ore vengono rimosse automaticamente. 0 = disattivato. (es. 24 = 1 giorno)", "Las entradas más antiguas que x horas se eliminan automáticamente. 0 = desactivado. (p.ej. 24 = 1 día)")</small>
+                </label>
+                <input type="number" min="0" @bind="_model.MhMaxAgeHours" />
 
                 <label>
                     @Loc.T("Zeitversatz (Stunden)", "Time Offset (Hours)", "Offset orario (ore)", "Desfase horario (horas)")<br />
@@ -116,20 +128,24 @@
                 </label>
                 <textarea rows="4" @bind="_model.GroupsText"></textarea>
             </div>
+            }
         </div>
 
         <!-- Datenspeicherung / Data Storage -->
         <div class="settings-section @(IsOpen("data") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("data")'>💾 @Loc.T("Datenspeicherung", "Data Storage", "Archiviazione dati", "Almacenamiento de datos") <span class="section-chevron">@(IsOpen("data") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("data")) {
             <div class="settings-grid">
                 <label>@Loc.T("Datenpfad", "Data Path", "Percorso dati", "Ruta de datos")</label>
                 <input type="text" @bind="_model.DataPath" />
             </div>
+            }
         </div>
 
         <!-- Auto-Reply -->
         <div class="settings-section @(IsOpen("autoreply") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("autoreply")'>↩️ Auto-Reply <span class="section-chevron">@(IsOpen("autoreply") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("autoreply")) {
             <div class="settings-grid">
                 <label>@Loc.T("Auto-Reply aktiv", "Auto-Reply Active", "Auto-risposta attiva", "Auto-respuesta activa")</label>
                 <label class="settings-toggle">
@@ -212,11 +228,13 @@
                                     </div>
                                 }
                             </div>
+            }
                         </div>
 
                         <!-- Bot-Befehle / Bot Commands -->
                         <div class="settings-section @(IsOpen("bot") ? "" : "settings-section-collapsed")">
                             <h2 class="settings-section-title" @onclick='() => Toggle("bot")'>🤖 Bot <span class="section-chevron">@(IsOpen("bot") ? "▲" : "▼")</span></h2>
+                            @if (IsOpen("bot")) {
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                                 ℹ️ @Loc.T(
                                     "Eingehende Direkt-Nachrichten, die mit -- beginnen, werden als Befehle interpretiert. Eingebaut: --version, --time, --mh, --ping, --echo, --help.",
@@ -350,11 +368,13 @@
                                 }
                             </div>
 
+                            }
                         </div>
 
                         <!-- Bake / Beacon -->
         <div class="settings-section @(IsOpen("beacon") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("beacon")'>📡 @Loc.T("Bake (Beacon)", "Beacon", "Beacon", "Baliza") <span class="section-chevron">@(IsOpen("beacon") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("beacon")) {
             <div class="settings-grid">
                 <label>@Loc.T("Bake aktiv", "Beacon Active", "Beacon attivo", "Baliza activa")</label>
                 <label class="settings-toggle">
@@ -402,11 +422,13 @@
                     </div>
                 }
             </div>
+            }
         </div>
 
         <!-- Telemetrie / Telemetry -->
         <div class="settings-section @(IsOpen("tele") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("tele")'>📊 @Loc.T("Telemetrie", "Telemetry", "Telemetria", "Telemetría") <span class="section-chevron">@(IsOpen("tele") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("tele")) {
             <div class="settings-grid">
                 <label>@Loc.T("Telemetrie aktiv", "Telemetry Active", "Telemetria attiva", "Telemetría activa")</label>
                 <label class="settings-toggle">
@@ -544,11 +566,13 @@
                     </div>
                 }
             </div>
+            }
         </div>
 
         <!-- Watchlist -->
         <div class="settings-section @(IsOpen("watch") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("watch")'>📻 @Loc.T("Watchlist", "Watchlist", "Watchlist", "Watchlist") <span class="section-chevron">@(IsOpen("watch") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("watch")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Wenn ein eingehendes Paket (Nachricht, Position oder Telemetrie) von einem dieser Rufzeichen empfangen wird, ertönt ein Signalton und eine Benachrichtigung wird angezeigt.",
@@ -594,11 +618,13 @@
                 </label>
                 <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
             </div>
+            }
         </div>
 
         <!-- Sprache / Language -->
         <div class="settings-section @(IsOpen("lang") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("lang")'>🌐 @Loc.T("Sprache", "Language", "Lingua", "Idioma") <span class="section-chevron">@(IsOpen("lang") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("lang")) {
             <div class="settings-grid">
                 <label>@Loc.T("Oberflächensprache", "UI Language", "Lingua interfaccia", "Idioma de la interfaz")</label>
                 <select @bind="_model.Language">
@@ -608,11 +634,13 @@
                     <option value="es">🇪🇸 Español</option>
                 </select>
             </div>
+            }
         </div>
 
         <!-- Datenbank / Database -->
         <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database", "Database", "Base de datos") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("db")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Monitor-Einträge (Rufzeichen, Nachrichtentexte, GPS, RSSI) werden in die externe Datenbank geschrieben. Nur im eigenen, abgesicherten Netz betreiben. Datenschutz beachten.",
@@ -743,11 +771,13 @@
                     }
                 }
             }
+            }
         </div>
 
         <!-- Webhook -->
         <div class="settings-section @(IsOpen("webhook") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("webhook")'>🔗 Webhook <span class="section-chevron">@(IsOpen("webhook") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("webhook")) {
             <div class="settings-grid">
                 <label>@Loc.T("Webhook aktiv", "Webhook Active", "Webhook attivo", "Webhook activo")</label>
                 <label class="settings-toggle">
@@ -777,11 +807,13 @@
                     </label>
                 </div>
             </div>
+            }
         </div>
 
         <!-- MQTT -->
         <div class="settings-section @(IsOpen("mqtt") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("mqtt")) {
             <div class="settings-grid">
                 <label>@Loc.T("MQTT aktiv", "MQTT Active", "MQTT attivo", "MQTT activo")</label>
                 <label class="settings-toggle">
@@ -881,11 +913,13 @@
                     @_mqttTestResult
                 </div>
             }
+            }
         </div>
 
         <!-- QRZ.com -->
         <div class="settings-section @(IsOpen("qrz") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("qrz")'>🔍 QRZ.com <span class="section-chevron">@(IsOpen("qrz") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("qrz")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Abfragen des QRZ.com XML-API. Kostenloser Account liefert Basisdaten (Vorname, Ort). Ein XML-Abo (ca. $30/Jahr) schaltet vollständige Profildaten frei.",
@@ -947,6 +981,7 @@
                     </div>
                 }
             }
+            }
         </div>
 
         <!-- Schnelltexte / Quick Texts -->
@@ -955,6 +990,7 @@
                 ⚡ @Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")
                 <span class="section-chevron">@(IsOpen("quicktexts") ? "▲" : "▼")</span>
             </h2>
+            @if (IsOpen("quicktexts")) {
             <div>
                 <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                     ℹ️ @Loc.T(
@@ -1046,6 +1082,7 @@
                 </div>
             }
             </div>
+            }
         </div>
 
         <!-- Gruppen-Labels -->
@@ -1054,6 +1091,7 @@
                 🏷️ @Loc.T("Gruppen-Labels", "Group Labels", "Etichette Gruppo", "Etiquetas de Grupo")
                 <span class="section-chevron">@(IsOpen("grouplabels") ? "▲" : "▼")</span>
             </h2>
+            @if (IsOpen("grouplabels")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Gruppen-Nummern werden im Chat-Tab mit einem Kurznamen angezeigt. Der vollständige Name erscheint als Tooltip. Quelle: icssw.org/meshcom-grc-gruppen/",
@@ -1107,6 +1145,7 @@
                     <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
                 }
             </div>
+            }
         </div>
 
         <!-- KI / QSO-Zusammenfassung -->
@@ -1115,6 +1154,7 @@
                 🤖 @Loc.T("KI / QSO-Zusammenfassung", "AI / QSO Summary", "IA / Riepilogo QSO", "IA / Resumen QSO")
                 <span class="section-chevron">@(IsOpen("ai") ? "▲" : "▼")</span>
             </h2>
+            @if (IsOpen("ai")) {
             <div class="settings-grid">
                 <label>@Loc.T("Aktiviert", "Enabled", "Attivo", "Activo")</label>
                 <label class="toggle-label">
@@ -1286,6 +1326,7 @@
                     }
                 </div>
             }
+            }
         </div>
 
         <!-- Datensicherung / Backup & Restore -->
@@ -1294,6 +1335,7 @@
                 🔐 @Loc.T("Datensicherung", "Backup & Restore", "Backup e ripristino", "Copia de seguridad")
                 <span class="section-chevron">@(IsOpen("backup") ? "▲" : "▼")</span>
             </h2>
+            @if (IsOpen("backup")) {
             <div class="settings-notice" style="margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Einstellungen inkl. Passwörter und API-Keys werden AES-256 verschlüsselt gespeichert. Das Passwort wird nirgendwo gespeichert – bei Verlust ist die Datei nicht wiederherstellbar.",
@@ -1352,6 +1394,7 @@
                 <div class="settings-success" style="margin-top:0.5rem">
                     ✅ @Loc.T("Erfolgreich.", "Success.", "Operazione riuscita.", "Correcto.")
                 </div>
+            }
             }
         </div>
 
@@ -1877,6 +1920,7 @@
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             MonitorMaxMessages  = s.MonitorMaxMessages,
+            MhMaxAgeHours       = s.MhMaxAgeHours,
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
             WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
@@ -1972,7 +2016,10 @@
         _errorMessage = null;
         try
         {
-            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+            var saved = _model.ToSettings();
+            await SettingsService.SaveMeshcomSettingsAsync(saved);
+            if (saved.MhMaxAgeHours > 0)
+                ChatService.PurgeMhListByAge();
             _saved = true;
         }
         catch (Exception ex)
@@ -2402,6 +2449,7 @@
                 LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
+                MhMaxAgeHours       = s.MhMaxAgeHours,
                 GroupFilterEnabled  = s.GroupFilterEnabled,
                 GroupsText          = string.Join("\n", s.Groups),
                 WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
@@ -2499,6 +2547,7 @@
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
         public int    MonitorMaxMessages  { get; set; } = 1000;
+        public int    MhMaxAgeHours       { get; set; } = 0;
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
         public string WatchCallsignsText  { get; set; } = string.Empty;
@@ -2606,6 +2655,7 @@
             LogRetainDays       = LogRetainDays,
             LogUdpTraffic       = LogUdpTraffic,
             MonitorMaxMessages  = MonitorMaxMessages,
+            MhMaxAgeHours       = MhMaxAgeHours,
             GroupFilterEnabled  = GroupFilterEnabled,
             Groups              = GroupsText
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

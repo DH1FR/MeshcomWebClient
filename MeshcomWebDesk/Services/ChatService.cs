@@ -35,6 +35,13 @@ public class ChatService
     public event Action? OnChange;
 
     /// <summary>
+    /// Raised only when the MH list itself changes (station added, removed, position or
+    /// telemetry updated). Map and MH-page subscribe to this instead of <see cref="OnChange"/>
+    /// to avoid rebuilding on every chat message.
+    /// </summary>
+    public event Action? OnMhChange;
+
+    /// <summary>
     /// Raised when a brand-new direct (1:1) tab is created by an incoming message.
     /// The argument is the remote callsign. Not raised for broadcast (*) or group (#) tabs,
     /// and not raised when tabs are restored from a snapshot or opened manually.
@@ -164,7 +171,7 @@ public class ChatService
 
         // Update MH list BEFORE triggering the auto-reply so that RSSI, relay path and
         // hardware data from this message are available to ExpandVariables immediately.
-        UpdateMhList(message);
+        bool mhChanged = UpdateMhList(message);
 
         ChatTab? tab = null;
         bool wasNewDirect = false;
@@ -197,6 +204,7 @@ public class ChatService
         if (wasNewDirect && tab != null)
             _ = CheckQsoSummaryAsync(tab, tabKey);
 
+        if (mhChanged) OnMhChange?.Invoke();
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
         _ = _mqtt?.PublishAsync(message, "message");
@@ -375,24 +383,52 @@ public class ChatService
         }
 
         // Update relay path / RSSI for this station so the map shows the connection
-        UpdateMhList(message);
+        bool ackMhChanged = UpdateMhList(message);
 
         lock (_lock) { AppendToMonitor(message); }
+        if (ackMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         CheckWatchlist(message);
     }
 
-    /// <summary>Remove all entries from the MH list.
+    /// <summary>Remove all entries from the MH list.</summary>
     public void ClearMhList()
     {
         _mhList.Clear();
-        NotifyChange();
+        OnMhChange?.Invoke();
+        OnChange?.Invoke();
+    }
+
+    /// <summary>
+    /// Removes MH list entries whose <c>LastHeard</c> timestamp is older than
+    /// <see cref="MeshcomSettings.MhMaxAgeHours"/> hours.
+    /// Does nothing when <c>MhMaxAgeHours</c> is 0 (feature disabled).
+    /// </summary>
+    /// <returns>Number of removed entries.</returns>
+    public int PurgeMhListByAge()
+    {
+        int maxAgeHours = _settings.MhMaxAgeHours;
+        if (maxAgeHours <= 0) return 0;
+
+        var cutoff = DateTime.Now.AddHours(-maxAgeHours);
+        var toRemove = _mhList.Where(kv => kv.Value.LastHeard < cutoff).Select(kv => kv.Key).ToList();
+        foreach (var key in toRemove)
+            _mhList.TryRemove(key, out _);
+
+        if (toRemove.Count > 0)
+        {
+            OnMhChange?.Invoke();
+            OnChange?.Invoke();
+        }
+
+        return toRemove.Count;
     }
 
     public void RemoveFromMhList(string callsign)
     {
         _mhList.TryRemove(callsign, out _);
-        NotifyChange();
+        OnMhChange?.Invoke();
+        OnChange?.Invoke();
     }
 
     /// <summary>
@@ -458,6 +494,9 @@ public class ChatService
         }
         NotifyChange();
 
+        // Remove stale MH entries loaded from snapshot
+        PurgeMhListByAge();
+
         // Async: check QSO summary for all restored direct tabs
         foreach (var tab in _tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))
             _ = CheckQsoSummaryAsync(tab, tab.Key);
@@ -469,8 +508,9 @@ public class ChatService
     /// </summary>
     public void AddPositionBeacon(MeshcomMessage message)
     {
-        UpdateMhList(message);
+        bool posMhChanged = UpdateMhList(message);
         lock (_lock) { AppendToMonitor(message); }
+        if (posMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         _ = _webhook.SendAsync(message, "position");
         _ = _mqtt?.PublishAsync(message, "position");
@@ -483,8 +523,9 @@ public class ChatService
     /// </summary>
     public void AddTelemetry(MeshcomMessage message)
     {
-        UpdateMhList(message);
+        bool telMhChanged = UpdateMhList(message);
         lock (_lock) { AppendToMonitor(message); }
+        if (telMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         _ = _webhook.SendAsync(message, "telemetry");
         _ = _mqtt?.PublishAsync(message, "telemetry");
@@ -557,40 +598,51 @@ public class ChatService
         }
     }
 
-    private void UpdateMhList(MeshcomMessage message)
+    /// <summary>
+    /// Updates the MH list from the given message.
+    /// Returns <c>true</c> when the map/MH view should be refreshed:
+    /// new station, position change, telemetry update, relay path change, or RSSI update.
+    /// </summary>
+    private bool UpdateMhList(MeshcomMessage message)
     {
         if (string.IsNullOrEmpty(message.From))
-            return;
+            return false;
+
+        bool mhChanged = false;
 
         _mhList.AddOrUpdate(
             message.From,
-            _ => new HeardStation
+            _ =>
             {
-                Callsign         = message.From,
-                FirstHeard       = message.Timestamp,
-                LastHeard        = message.Timestamp,
-                MessageCount     = (message.IsPositionBeacon || message.IsTelemetry || message.IsAck) ? 0 : 1,
-                LastDestination  = message.IsAck ? string.Empty : message.To,
-                LastMessage      = message.IsAck ? string.Empty : message.Text,
-                LastRssi         = message.Rssi,
-                LastSnr          = message.Snr,
-                Latitude         = message.Latitude,
-                Longitude        = message.Longitude,
-                Altitude         = message.Altitude,
-                LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null,
-                Battery          = message.Battery,
-                HwId             = message.HwId,
-                Firmware         = message.Firmware,
-                LastRelayPath        = message.RelayPath,
-                HopCount             = message.RelayPath?.Split(',').Length - 1 ?? 0,
-                RelayPathCount       = message.RelayPath != null ? 1 : 0,
-                LastSrcType          = message.SrcType,
-                DirectLinkConfirmed  = (message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
-                                       && message.RelayPath == null,
-                Temp1             = message.IsTelemetry ? message.Temp1     : null,
-                Humidity          = message.IsTelemetry ? message.Humidity  : null,
-                Pressure          = message.IsTelemetry ? message.Pressure  : null,
-                LastTelemetryTime = message.IsTelemetry ? message.Timestamp : null,
+                mhChanged = true;
+                return new HeardStation
+                {
+                    Callsign         = message.From,
+                    FirstHeard       = message.Timestamp,
+                    LastHeard        = message.Timestamp,
+                    MessageCount     = (message.IsPositionBeacon || message.IsTelemetry || message.IsAck) ? 0 : 1,
+                    LastDestination  = message.IsAck ? string.Empty : message.To,
+                    LastMessage      = message.IsAck ? string.Empty : message.Text,
+                    LastRssi         = message.Rssi,
+                    LastSnr          = message.Snr,
+                    Latitude         = message.Latitude,
+                    Longitude        = message.Longitude,
+                    Altitude         = message.Altitude,
+                    LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null,
+                    Battery          = message.Battery,
+                    HwId             = message.HwId,
+                    Firmware         = message.Firmware,
+                    LastRelayPath        = message.RelayPath,
+                    HopCount             = message.RelayPath?.Split(',').Length - 1 ?? 0,
+                    RelayPathCount       = message.RelayPath != null ? 1 : 0,
+                    LastSrcType          = message.SrcType,
+                    DirectLinkConfirmed  = (message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
+                                           && message.RelayPath == null,
+                    Temp1             = message.IsTelemetry ? message.Temp1     : null,
+                    Humidity          = message.IsTelemetry ? message.Humidity  : null,
+                    Pressure          = message.IsTelemetry ? message.Pressure  : null,
+                    LastTelemetryTime = message.IsTelemetry ? message.Timestamp : null,
+                };
             },
             (_, s) =>
             {
@@ -601,9 +653,9 @@ public class ChatService
                     s.LastDestination = message.To;
                     s.LastMessage     = message.Text;
                 }
-                if (message.Rssi.HasValue)    s.LastRssi = message.Rssi;
-                if (message.Snr.HasValue)     s.LastSnr  = message.Snr;
-                if (message.Battery.HasValue) s.Battery  = message.Battery;
+                if (message.Rssi.HasValue)    { s.LastRssi = message.Rssi;  mhChanged = true; }
+                if (message.Snr.HasValue)     { s.LastSnr  = message.Snr;   mhChanged = true; }
+                if (message.Battery.HasValue) { s.Battery  = message.Battery; mhChanged = true; }
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
                 if (!string.IsNullOrEmpty(message.SrcType))  s.LastSrcType = message.SrcType;
@@ -621,6 +673,7 @@ public class ChatService
                     else
                         s.RelayPathCount = 1;
                     s.LastRelayPath = message.RelayPath;
+                    mhChanged = true;
                 }
                 if (message.Latitude.HasValue)
                 {
@@ -628,6 +681,7 @@ public class ChatService
                     s.Longitude        = message.Longitude;
                     s.Altitude         = message.Altitude;
                     s.LastPositionTime = message.Timestamp;
+                    mhChanged = true;
                 }
                 if (message.IsTelemetry)
                 {
@@ -635,9 +689,12 @@ public class ChatService
                     if (message.Humidity.HasValue)  s.Humidity = message.Humidity;
                     if (message.Pressure.HasValue)  s.Pressure = message.Pressure;
                     s.LastTelemetryTime = message.Timestamp;
+                    mhChanged = true;
                 }
                 return s;
             });
+
+        return mhChanged;
     }
 
     /// <summary>

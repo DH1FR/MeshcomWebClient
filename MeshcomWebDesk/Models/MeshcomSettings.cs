@@ -195,6 +195,22 @@ public class MeshcomSettings
     /// </summary>
     public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults;
 
+    /// <summary>
+    /// Maximum age of MH list entries in hours. Entries whose <c>LastHeard</c> timestamp is
+    /// older than this value are automatically removed from the MH list and the map.
+    /// Set to 0 to disable automatic removal. Default is 0.
+    /// Examples: 2 = 2 hours, 24 = 1 day, 168 = 1 week.
+    /// </summary>
+    public int MhMaxAgeHours { get; set; } = 0;
+
+    /// <summary>
+    /// Migration: old setting stored age in days. When present and <see cref="MhMaxAgeHours"/>
+    /// is still 0, the value is multiplied by 24 and written to <see cref="MhMaxAgeHours"/>
+    /// by <see cref="Services.MhMaxAgeMigration"/>.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int MhMaxAgeDays { get; set; } = 0;
+
     /// <summary>Optional QRZ.com XML API integration for callsign lookups in the MH list.</summary>
     public QrzSettings Qrz { get; set; } = new();
 

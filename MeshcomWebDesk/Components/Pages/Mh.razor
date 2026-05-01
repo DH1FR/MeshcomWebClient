@@ -388,7 +388,7 @@
         _status     = UdpService.Status;
         _stations   = ChatService.MhList;
         RebuildSearchCache();
-        ChatService.OnChange      += OnChanged;
+        ChatService.OnMhChange    += OnChanged;
         UdpService.OnStatusChange += OnStatusChanged;
 
         // Pre-fill QRZ data synchronously from the persistent in-memory cache so the
@@ -411,6 +411,8 @@
         try
         {
             var newList = ChatService.MhList;
+            // Check for new callsigns before switching to the UI thread
+            var hasNewCallsigns = newList.Any(s => !_qrzData.ContainsKey(s.Callsign));
             await InvokeAsync(() =>
             {
                 if (_disposed) return;
@@ -418,7 +420,8 @@
                 RebuildSearchCache();
                 StateHasChanged();
             });
-            if (await LoadQrzDataAsync(newList) && !_disposed)
+            // Only fetch QRZ data when there are genuinely new stations
+            if (hasNewCallsigns && await LoadQrzDataAsync(newList) && !_disposed)
                 await InvokeAsync(StateHasChanged);
         }
         catch (Exception) { }
@@ -523,8 +526,8 @@
     public void Dispose()
     {
         _disposed = true;
-        Loc.OnChange      -= StateHasChanged;
-        ChatService.OnChange      -= OnChanged;
+        Loc.OnChange              -= StateHasChanged;
+        ChatService.OnMhChange    -= OnChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
     }
 }

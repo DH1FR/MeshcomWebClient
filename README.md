@@ -1181,6 +1181,13 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.9.2
+- **feat:** 🗺️ **MH-Liste – Automatisches Löschen alter Einträge** – neue Einstellung „MH-Liste: Max. Alter (Stunden)" im Abschnitt *Chat & Monitor*; Einträge, deren `LastHeard`-Zeitstempel älter als die konfigurierte Anzahl Stunden ist, werden stündlich automatisch entfernt; beim Programmstart und beim Speichern der Einstellungen werden veraltete Einträge ebenfalls sofort bereinigt; `0` deaktiviert das Feature (rückwärtskompatibel); Karte zeigt damit nur noch aktuelle Stationen; bestehende Werte (Tage) werden automatisch in Stunden migriert
+- **perf:** ⚙️ **Einstellungen – Lazy Rendering** – Section-Inhalte werden erst beim Öffnen gerendert; beim ersten Laden der Seite werden nur die 18 Section-Header gerendert statt aller ~149 Bindings → deutlich schnelleres Öffnen der Einstellungsseite
+- **perf:** 📻 **MH-Liste & Karte** – neues `OnMhChange`-Event; MH-Liste und Karte reagieren nur noch auf MH-relevante Updates; Karte mit 400 ms Debounce; QRZ-Abfragen nur für neue, unbekannte Rufzeichen
+- **feat:** 📊 **Statusleiste responsive** – passt sich dynamisch der verfügbaren Breite an; Elemente werden stufenweise ausgeblendet wenn der Platz nicht ausreicht (`ResizeObserver` + `MutationObserver`)
+- **fix:** ⚙️ **MH Max. Alter – Persistenz** – `MhMaxAgeHours` wurde nach einem Seitenwechsel auf 0 zurückgesetzt; Fehler in `SettingsService` behoben
+
 ### v1.9.1
 - **feat:** Bug fixes and optimizations.
 
