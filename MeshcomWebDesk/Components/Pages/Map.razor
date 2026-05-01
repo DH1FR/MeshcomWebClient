@@ -394,6 +394,7 @@
             {
                 var covPoints = mhList
                     .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                        && s.HopCount == 0
                         && GeoHelper.CalculateDistanceKm(
                             status.OwnLatitude.Value, status.OwnLongitude.Value,
                             s.Latitude!.Value, s.Longitude!.Value) <= 500)
@@ -596,9 +597,10 @@
             return;
         }
 
-        // Reichweiten-Hull: alle GPS-Stationen bis max. 500 km Entfernung
+        // Reichweiten-Hull: nur direkt gehörte Stationen (HopCount == 0), max. 500 km
         var measuredPoints = ChatService.MhList
             .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                && s.HopCount == 0
                 && GeoHelper.CalculateDistanceKm(
                     status.OwnLatitude.Value, status.OwnLongitude.Value,
                     s.Latitude!.Value, s.Longitude!.Value) <= 500)
