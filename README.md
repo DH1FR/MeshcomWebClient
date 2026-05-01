@@ -1187,6 +1187,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **perf:** 📻 **MH-Liste & Karte** – neues `OnMhChange`-Event; MH-Liste und Karte reagieren nur noch auf MH-relevante Updates; Karte mit 400 ms Debounce; QRZ-Abfragen nur für neue, unbekannte Rufzeichen
 - **feat:** 📊 **Statusleiste responsive** – passt sich dynamisch der verfügbaren Breite an; Elemente werden stufenweise ausgeblendet wenn der Platz nicht ausreicht (`ResizeObserver` + `MutationObserver`)
 - **fix:** ⚙️ **MH Max. Alter – Persistenz** – `MhMaxAgeHours` wurde nach einem Seitenwechsel auf 0 zurückgesetzt; Fehler in `SettingsService` behoben
+- **fix:** 🗺️ **Karte – Reichweiten-Wolke** – die Reichweiten-Wolke (Convex Hull) wurde nach einem MH-Update oder MH-Purge nicht neu berechnet und blieb leer; `UpdateMarkersAsync()` ruft jetzt `setCoverage` automatisch neu auf wenn die Anzeige aktiv ist
 
 ### v1.9.1
 - **feat:** Bug fixes and optimizations.
