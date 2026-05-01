@@ -391,16 +391,16 @@ public class ChatService
 
     /// <summary>
     /// Removes MH list entries whose <c>LastHeard</c> timestamp is older than
-    /// <see cref="MeshcomSettings.MhMaxAgeDays"/> days.
-    /// Does nothing when <c>MhMaxAgeDays</c> is 0 (feature disabled).
+    /// <see cref="MeshcomSettings.MhMaxAgeHours"/> hours.
+    /// Does nothing when <c>MhMaxAgeHours</c> is 0 (feature disabled).
     /// </summary>
     /// <returns>Number of removed entries.</returns>
     public int PurgeMhListByAge()
     {
-        int maxAge = _settings.MhMaxAgeDays;
-        if (maxAge <= 0) return 0;
+        int maxAgeHours = _settings.MhMaxAgeHours;
+        if (maxAgeHours <= 0) return 0;
 
-        var cutoff = DateTime.Now.AddDays(-maxAge);
+        var cutoff = DateTime.Now.AddHours(-maxAgeHours);
         var toRemove = _mhList.Where(kv => kv.Value.LastHeard < cutoff).Select(kv => kv.Key).ToList();
         foreach (var key in toRemove)
             _mhList.TryRemove(key, out _);
