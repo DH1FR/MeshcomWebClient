@@ -12,6 +12,7 @@
 @inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject NavigationManager Nav
+@inject ChatService ChatService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -1979,7 +1980,10 @@
         _errorMessage = null;
         try
         {
-            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+            var saved = _model.ToSettings();
+            await SettingsService.SaveMeshcomSettingsAsync(saved);
+            if (saved.MhMaxAgeHours > 0)
+                ChatService.PurgeMhListByAge();
             _saved = true;
         }
         catch (Exception ex)

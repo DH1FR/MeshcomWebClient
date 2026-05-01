@@ -155,7 +155,8 @@ public class SettingsService
                     ["Group"]      = g.Group,
                     ["ShortLabel"] = g.ShortLabel,
                     ["Label"]      = g.Label
-                }).ToArray())
+                }).ToArray()),
+                ["MhMaxAgeHours"] = s.MhMaxAgeHours
             }
         };
 

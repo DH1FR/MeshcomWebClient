@@ -180,11 +180,15 @@
     private bool         _showSearchResults;
     private DotNetObjectReference<Map>? _dotNetRef;
 
+    // Debounce: avoid rebuilding markers on every single incoming packet
+    private CancellationTokenSource? _markerDebounce;
+    private static readonly TimeSpan MarkerDebounceDelay = TimeSpan.FromMilliseconds(400);
+
     protected override void OnInitialized()
     {
-        Loc.OnChange            += StateHasChanged;
-        ChatService.OnChange    += OnDataChanged;
-        UdpService.OnStatusChange += OnDataChanged;
+        Loc.OnChange              += StateHasChanged;
+        ChatService.OnMhChange    += OnMhDataChanged;
+        UdpService.OnStatusChange += OnMhDataChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -195,19 +199,25 @@
             await UpdateMarkersAsync();
     }
 
-    private async void OnDataChanged()
+    private async void OnMhDataChanged()
     {
         if (_disposed) return;
+        // Cancel any pending debounce and start a new one
+        _markerDebounce?.Cancel();
+        _markerDebounce = new CancellationTokenSource();
+        var token = _markerDebounce.Token;
         try
         {
+            await Task.Delay(MarkerDebounceDelay, token);
+            if (token.IsCancellationRequested) return;
             await InvokeAsync(async () =>
             {
-                if (_disposed) return;
-                if (_mapInitialized)
-                    await UpdateMarkersAsync();
+                if (_disposed || !_mapInitialized) return;
+                await UpdateMarkersAsync();
                 StateHasChanged();
             });
         }
+        catch (OperationCanceledException) { }
         catch (Exception) { }
     }
 
@@ -475,10 +485,11 @@
     public void Dispose()
     {
         _disposed = true;
+        _markerDebounce?.Cancel();
         _dotNetRef?.Dispose();
         Loc.OnChange              -= StateHasChanged;
-        ChatService.OnChange      -= OnDataChanged;
-        UdpService.OnStatusChange -= OnDataChanged;
+        ChatService.OnMhChange    -= OnMhDataChanged;
+        UdpService.OnStatusChange -= OnMhDataChanged;
     }
 
     [JSInvokable]
