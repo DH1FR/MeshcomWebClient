@@ -40,6 +40,12 @@ public class DataPersistenceService : BackgroundService
     {
         await LoadAsync();
 
+        // Run an immediate purge after loading so stale entries from the snapshot
+        // are removed right away (important when the setting was just configured).
+        int startupRemoved = _chatService.PurgeMhListByAge();
+        if (startupRemoved > 0)
+            _logger.LogInformation("MH list startup purge removed {Count} stale entries", startupRemoved);
+
         var lastPurge = DateTime.Now;
         using var timer = new PeriodicTimer(AutoSaveInterval);
         try
