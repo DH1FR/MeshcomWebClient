@@ -12,6 +12,7 @@ public class DataPersistenceService : BackgroundService
 {
     private const string FileName = "meshcom-state.json";
     private static readonly TimeSpan AutoSaveInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MhPurgeInterval  = TimeSpan.FromHours(1);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -39,11 +40,21 @@ public class DataPersistenceService : BackgroundService
     {
         await LoadAsync();
 
+        var lastPurge = DateTime.Now;
         using var timer = new PeriodicTimer(AutoSaveInterval);
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
+            {
+                if (DateTime.Now - lastPurge >= MhPurgeInterval)
+                {
+                    int removed = _chatService.PurgeMhListByAge();
+                    if (removed > 0)
+                        _logger.LogInformation("MH list purge removed {Count} stale entries", removed);
+                    lastPurge = DateTime.Now;
+                }
                 await SaveAsync();
+            }
         }
         catch (OperationCanceledException) { }
 

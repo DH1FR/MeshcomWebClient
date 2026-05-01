@@ -389,6 +389,28 @@ public class ChatService
         NotifyChange();
     }
 
+    /// <summary>
+    /// Removes MH list entries whose <c>LastHeard</c> timestamp is older than
+    /// <see cref="MeshcomSettings.MhMaxAgeDays"/> days.
+    /// Does nothing when <c>MhMaxAgeDays</c> is 0 (feature disabled).
+    /// </summary>
+    /// <returns>Number of removed entries.</returns>
+    public int PurgeMhListByAge()
+    {
+        int maxAge = _settings.MhMaxAgeDays;
+        if (maxAge <= 0) return 0;
+
+        var cutoff = DateTime.Now.AddDays(-maxAge);
+        var toRemove = _mhList.Where(kv => kv.Value.LastHeard < cutoff).Select(kv => kv.Key).ToList();
+        foreach (var key in toRemove)
+            _mhList.TryRemove(key, out _);
+
+        if (toRemove.Count > 0)
+            NotifyChange();
+
+        return toRemove.Count;
+    }
+
     public void RemoveFromMhList(string callsign)
     {
         _mhList.TryRemove(callsign, out _);
@@ -457,6 +479,9 @@ public class ChatService
                 _mhList[station.Callsign] = station;
         }
         NotifyChange();
+
+        // Remove stale MH entries loaded from snapshot
+        PurgeMhListByAge();
 
         // Async: check QSO summary for all restored direct tabs
         foreach (var tab in _tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))

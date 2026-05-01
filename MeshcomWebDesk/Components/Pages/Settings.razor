@@ -99,6 +99,12 @@
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
 
                 <label>
+                    @Loc.T("MH-Liste: Max. Alter (Tage)", "MH List: Max. Age (Days)", "Lista MH: Età max. (giorni)", "Lista MH: Edad máx. (días)")<br />
+                    <small>@Loc.T("Einträge älter als x Tage werden automatisch gelöscht. 0 = deaktiviert.", "Entries older than x days are automatically removed. 0 = disabled.", "Voci più vecchie di x giorni vengono rimosse automaticamente. 0 = disattivato.", "Las entradas más antiguas que x días se eliminan automáticamente. 0 = desactivado.")</small>
+                </label>
+                <input type="number" min="0" @bind="_model.MhMaxAgeDays" />
+
+                <label>
                     @Loc.T("Zeitversatz (Stunden)", "Time Offset (Hours)", "Offset orario (ore)", "Desfase horario (horas)")<br />
                     <small>@Loc.T("UTC-Korrektur für Zeitanzeige, z.\u00a0B. 1 für MEZ, 2 für MESZ, 0 wenn Zeitzone bereits korrekt", "UTC offset for time display, e.\u00a0g. 1 for CET, 2 for CEST, 0 if timezone already correct", "Offset UTC per visualizzazione, es. 1 per CET, 2 per CEST", "Desfase UTC para visualización, p.ej. 1 para CET, 2 para CEST")</small>
                 </label>
@@ -1877,6 +1883,7 @@
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             MonitorMaxMessages  = s.MonitorMaxMessages,
+            MhMaxAgeDays        = s.MhMaxAgeDays,
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
             WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
@@ -2402,6 +2409,7 @@
                 LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
+                MhMaxAgeDays        = s.MhMaxAgeDays,
                 GroupFilterEnabled  = s.GroupFilterEnabled,
                 GroupsText          = string.Join("\n", s.Groups),
                 WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
@@ -2499,6 +2507,7 @@
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
         public int    MonitorMaxMessages  { get; set; } = 1000;
+        public int    MhMaxAgeDays        { get; set; } = 0;
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
         public string WatchCallsignsText  { get; set; } = string.Empty;
@@ -2606,6 +2615,7 @@
             LogRetainDays       = LogRetainDays,
             LogUdpTraffic       = LogUdpTraffic,
             MonitorMaxMessages  = MonitorMaxMessages,
+            MhMaxAgeDays        = MhMaxAgeDays,
             GroupFilterEnabled  = GroupFilterEnabled,
             Groups              = GroupsText
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
