@@ -39,9 +39,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 MeshCom always reminds me a little of the good old **Packet Radio** days – digital text communication over radio, simple and direct.
 
-That is why I created this **MeshCom WebDesk**.
+However, I could not find any suitable software that provides a **web server** interface for MeshCom accessible from any device (PC, tablet, smartphone) within the local network. That is why I created this **MeshCom WebDesk**.
 
-and makes a full web client for MeshCom available via a simple URL
+The application runs on **Windows** or **Linux** and makes a full web client for MeshCom available via a simple URL – no installation required on the end device, everything runs directly in the browser.
 
 ---
 
@@ -71,7 +71,9 @@ and makes a full web client for MeshCom available via a simple URL
 - **ACK delivery indicator** on every outgoing message:
   - `⏳` grey – waiting for node echo (message queued)
   - `✓` blue – node has transmitted over LoRa (sequence number assigned)
-  - `✓✓` green – recipient confirmed delivery (APRS ACK received)
+  - `✓✓` green – recipient confirmed delivery (LoRa ACK received)
+  - `☁️` – sent to group or broadcast (no ACK expected)
+  - `☁️✓` – delivered via gateway (Gateway ACK received)
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
@@ -647,9 +649,11 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 ### ACK delivery tracking
 
-1. Outgoing message sent → `⏳` pending
-2. Node echo arrives with sequence marker `{034}` → stored, indicator changes to `✓`
-3. Recipient sends APRS ACK `:ack034` → message marked as delivered `✓✓`
+1. Outgoing message sent → `⏳` pending (waiting for node echo)
+2. Node echo arrives with sequence marker `{034}` → indicator changes to `✓` (transmitted over LoRa)
+3. Recipient sends ACK `:ack034` → message marked as delivered `✓✓`
+4. Group / broadcast messages: no ACK expected → `☁️` after node echo
+5. Gateway delivery confirmed → `☁️✓`
 
 ### Hardware IDs (`hw_id`)
 
@@ -1411,7 +1415,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - Full relay path display in monitor
 
 ### v1.1.0
-- ACK delivery tracking (`⏳` / `✓` / `✓✓`)
+- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓`)
 - MH list with GPS distance, battery level and hardware badge
 - Web-based Settings editor
 - Multi-language UI (de / en / it / es)
