@@ -318,9 +318,11 @@ public class ChatService
         {
             // m.To may carry the '#' prefix (e.g. "#9") while the node echo uses the raw
             // group number (e.g. "9") – strip '#' on both sides before comparing.
+            // SequenceNumber is set to "TX" immediately on send (node never echoes back
+            // in EXTUDP mode), so match both null and "TX".
             var msg = _allMessages.LastOrDefault(m =>
                 m.IsOutgoing &&
-                m.SequenceNumber == null &&
+                (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
                 string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
             if (msg != null)
                 msg.SequenceNumber = sequenceNumber;
