@@ -180,6 +180,8 @@
                             <tbody>
                                 <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version",          "Versione app",           "Versión app")</td>          <td style="font-family:monospace">@ver</td></tr>
                                 <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",   "Own callsign",          "Nominativo proprio",     "Indicativo propio")</td>    <td style="font-family:monospace">@_model.MyCallsign</td></tr>
+                                <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware", "Node firmware", "Firmware del nodo", "Firmware del nodo")</td><td style="font-family:monospace">4.35</td></tr>
+                                <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",        "Node hardware",         "Hardware del nodo",      "Hardware del nodo")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
                                 <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen","Caller's callsign",    "Nominativo chiamante",   "Indicativo llamante")</td>  <td style="font-family:monospace">OE1KBC-1</td></tr>
                                 <tr><td><code>{mylocator}</code></td> <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>         <td style="font-family:monospace">JN48QN</td></tr>
                                 <tr><td><code>{dest-name}</code></td><td>@Loc.T("QRZ-Vorname",          "QRZ first name",        "Nome QRZ",               "Nombre QRZ")</td>           <td style="font-family:monospace;color:#7ee787">@Loc.T("Max ⚠️ nur wenn gecacht","Max ⚠️ if cached","Max ⚠️ se in cache","Max ⚠️ si en caché")</td></tr>
@@ -393,6 +395,8 @@
                         <code>{version}</code>,
                         <code>{mycall}</code>,
                         <code>{mylocator}</code>,
+                        <code>{node-firmware}</code>,
+                        <code>{node-hw}</code>,
                         <code>{date}</code>,
                         <code>{time}</code>
                     </span>

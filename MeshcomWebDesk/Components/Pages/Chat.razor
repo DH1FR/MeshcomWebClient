@@ -377,6 +377,13 @@
         <span class="status-item">
             <span class="status-badge status-badge-neutral">🎙️ @_myCallsign</span>
         </span>
+        @if (!string.IsNullOrEmpty(_status.NodeFirmware))
+        {
+            <span class="status-sep status-detail">|</span>
+            <span class="status-item status-detail" title="@Loc.T($"Node Firmware · Hardware: {MeshcomLookup.HwName(_status.NodeHwId)}", $"Node firmware · Hardware: {MeshcomLookup.HwName(_status.NodeHwId)}", $"Firmware node · Hardware: {MeshcomLookup.HwName(_status.NodeHwId)}", $"Firmware del nodo · Hardware: {MeshcomLookup.HwName(_status.NodeHwId)}")">
+                <span class="status-badge status-badge-info">⚙️ @_status.NodeFirmware@if (!string.IsNullOrEmpty(MeshcomLookup.HwName(_status.NodeHwId))) {<text>&nbsp;·&nbsp;@MeshcomLookup.HwName(_status.NodeHwId)</text>}</span>
+            </span>
+        }
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">
             <span class="status-badge status-badge-neutral">📨 RX @_status.RxCount / TX @_status.TxCount</span>

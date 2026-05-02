@@ -137,7 +137,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         }
 
                         // Skip node echoes of our own sent messages (already recorded as outgoing).
-                        // Still extract own GPS position from the echo if present.
+                        // Still extract own GPS position and node metadata from the echo if present.
                         if (string.Equals(message.From, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             if (message.Latitude.HasValue && message.Longitude.HasValue)
@@ -148,6 +148,14 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // Assign node-assigned sequence number to matching outgoing message
                             if (message.SequenceNumber != null)
                                 _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
+                            // Capture node firmware + hardware from src_type:"node" packets
+                            if (!string.IsNullOrEmpty(message.Firmware))
+                            {
+                                bool changed = Status.NodeFirmware != message.Firmware || Status.NodeHwId != message.HwId;
+                                Status.NodeFirmware = message.Firmware;
+                                Status.NodeHwId     = message.HwId;
+                                if (changed) NotifyStatusChange();
+                            }
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
                             // Do not add node echoes to the monitor – the TX entry is already shown there.
                         }
@@ -416,22 +424,24 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             : string.Empty;
 
         return template
-            .Replace("{version}",    AppVersion,                                         StringComparison.OrdinalIgnoreCase)
-            .Replace("{mycall}",     _settings.MyCallsign,                               StringComparison.OrdinalIgnoreCase)
-            .Replace("{mylocator}",  myLocator,                                          StringComparison.OrdinalIgnoreCase)
-            .Replace("{callsign}",   callsign              ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
-            .Replace("{dest-name}",  qrz?.FirstName        ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
-            .Replace("{dest-loc}",   qrz?.Location         ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
-            .Replace("{locator}",    locator,                                            StringComparison.OrdinalIgnoreCase)
-            .Replace("{rssi}",       station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("{snr}",        station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("{hw}",         MeshcomLookup.HwName(station?.HwId),                StringComparison.OrdinalIgnoreCase)
-            .Replace("{route}",      route,                                              StringComparison.OrdinalIgnoreCase)
-            .Replace("{hops}",           station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("{srctype-label}",  srcLabel,                                           StringComparison.OrdinalIgnoreCase)
-            .Replace("{srctype}",        srcType,                                            StringComparison.OrdinalIgnoreCase)
-            .Replace("{date}",       now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
-            .Replace("{time}",       now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase);
+            .Replace("{version}",       AppVersion,                                         StringComparison.OrdinalIgnoreCase)
+            .Replace("{mycall}",        _settings.MyCallsign,                               StringComparison.OrdinalIgnoreCase)
+            .Replace("{mylocator}",     myLocator,                                          StringComparison.OrdinalIgnoreCase)
+            .Replace("{node-firmware}", Status.NodeFirmware             ?? string.Empty,    StringComparison.OrdinalIgnoreCase)
+            .Replace("{node-hw}",       MeshcomLookup.HwName(Status.NodeHwId),              StringComparison.OrdinalIgnoreCase)
+            .Replace("{callsign}",      callsign              ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
+            .Replace("{dest-name}",     qrz?.FirstName        ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
+            .Replace("{dest-loc}",      qrz?.Location         ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
+            .Replace("{locator}",       locator,                                            StringComparison.OrdinalIgnoreCase)
+            .Replace("{rssi}",          station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{snr}",           station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{hw}",            MeshcomLookup.HwName(station?.HwId),                StringComparison.OrdinalIgnoreCase)
+            .Replace("{route}",         route,                                              StringComparison.OrdinalIgnoreCase)
+            .Replace("{hops}",          station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype-label}", srcLabel,                                           StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype}",       srcType,                                            StringComparison.OrdinalIgnoreCase)
+            .Replace("{date}",          now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
+            .Replace("{time}",          now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
