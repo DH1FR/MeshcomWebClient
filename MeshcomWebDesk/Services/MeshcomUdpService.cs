@@ -149,13 +149,18 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             if (message.SequenceNumber != null)
                                 _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
                             // Capture node firmware + hardware from src_type:"node" packets
-                            if (!string.IsNullOrEmpty(message.Firmware))
+                            bool metaChanged = false;
+                            if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
                             {
-                                bool changed = Status.NodeFirmware != message.Firmware || Status.NodeHwId != message.HwId;
                                 Status.NodeFirmware = message.Firmware;
-                                Status.NodeHwId     = message.HwId;
-                                if (changed) NotifyStatusChange();
+                                metaChanged = true;
                             }
+                            if (message.HwId.HasValue && Status.NodeHwId != message.HwId)
+                            {
+                                Status.NodeHwId = message.HwId;
+                                metaChanged = true;
+                            }
+                            if (metaChanged) NotifyStatusChange();
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
                             // Do not add node echoes to the monitor – the TX entry is already shown there.
                         }
