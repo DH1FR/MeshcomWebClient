@@ -1179,7 +1179,17 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ---
 
-## 📋 Changelog
+ ## 📋 Changelog
+
+### dev (unreleased)
+- **feat:** ⚙️ **Node-Firmware & Hardware in Statusleiste** – Firmware-Version und Hardware-Name des eigenen Nodes werden automatisch aus eingehenden `src_type:"node"`-Paketen gelesen und in der Statusleiste angezeigt (⚙️ 4.35 · T-BEAM); Wert erscheint sobald das erste Node-Paket empfangen wird
+- **feat:** 🔧 **Neue Variablen `{node-firmware}` und `{node-hw}`** – Firmware-Version und Hardware-Name des eigenen Nodes stehen in Auto-Reply, Bot-Befehlen, Bake-Text und Quick Texts als Platzhalter zur Verfügung; ergänzt in der Variablen-Referenztabelle in den Einstellungen
+- **feat:** 💬 **Sequenznummer im Monitor** – sobald der Node die Sequenznummer per Echo zurückmeldet, wird sie nachträglich neben der gesendeten Nachricht im Monitor angezeigt (`{411}`); erleichtert die Zuordnung von ACK zu TX
+- **fix:** 💬 **ACK-Zuordnung – Fallback auf 10 Minuten begrenzt** – der Fallback-Match (älteste unbestätigte Nachricht an Sender) wurde auf Nachrichten der letzten 10 Minuten beschränkt; verhindert dass beim Neustart geladene alte Nachrichten fälschlicherweise neue ACKs konsumieren
+- **fix:** 💬 **`AssignOutgoingSequence` – `SequenceNumber == "TX"` wird berücksichtigt** – beim Senden wird sofort `"TX"` als Sequenznummer gesetzt; die Suche nach dem passenden Echo-Paket schlug dadurch fehl (suchte nur `null`); beide Werte werden jetzt abgeglichen
+- **fix:** 📱 **iPad – Statusleiste nutzt volle Breite** – `width:100%; box-sizing:border-box` verhindert dass Safari/iPad die Statusleiste schmaler als den Container rendert; 8px Toleranzpuffer im JS-Overflow-Check verhindert vorzeitiges Ausblenden von Elementen
+- **fix:** 🔊 **iOS/iPad – Beep-Töne** – `AudioContext`-Entsperrung auf `touchstart` (statt nur `click`) umgestellt; Kontext wird beim ersten Touch sofort erzeugt und entsperrt
+- **fix:** 🔊 **iOS/iPad – Sprachausgabe** – `speechSynthesis` aus Hintergrund-Callbacks ist auf iOS durch Apple blockiert; TTS wird auf iOS/iPadOS übersprungen; Beep-Töne werden als Benachrichtigung verwendet
 
 ### v1.9.2
 - **feat:** 🗺️ **MH-Liste – Automatisches Löschen alter Einträge** – neue Einstellung „MH-Liste: Max. Alter (Stunden)" im Abschnitt *Chat & Monitor*; Einträge, deren `LastHeard`-Zeitstempel älter als die konfigurierte Anzahl Stunden ist, werden stündlich automatisch entfernt; beim Programmstart und beim Speichern der Einstellungen werden veraltete Einträge ebenfalls sofort bereinigt; `0` deaktiviert das Feature (rückwärtskompatibel); Karte zeigt damit nur noch aktuelle Stationen; bestehende Werte (Tage) werden automatisch in Stunden migriert
