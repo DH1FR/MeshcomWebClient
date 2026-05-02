@@ -350,11 +350,15 @@ public class ChatService
             // Fallback: match oldest unacknowledged outgoing message to the ACK sender.
             // This covers the case where the node never sent a {NNN} echo so the
             // outgoing message still has SequenceNumber = "TX".
+            // Time-limited to 10 minutes to prevent stale messages loaded from disk
+            // (from a previous session) from consuming ACKs for new messages.
             if (msg == null && ackSender != null)
             {
+                var cutoff = DateTime.Now.AddMinutes(-10);
                 msg = _allMessages.FirstOrDefault(m =>
                     m.IsOutgoing &&
                     !m.IsAcknowledged &&
+                    m.Timestamp >= cutoff &&
                     string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
             }
 
